@@ -1,0 +1,31 @@
+appId: id.pribadi.stockuploader
+productName: Stock Uploader
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  # Modul native opsional milik ssh2: tanpa ini ssh2 memakai versi JavaScript,
+  # jadi installer sama untuk Windows, Mac Intel, dan Mac Apple Silicon.
+  - '!node_modules/cpu-features/**'
+  - '!node_modules/ssh2/lib/protocol/crypto/build/**'
+npmRebuild: false
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: Stock-Uploader-Setup-${version}.${ext}
+  # Tanpa sertifikat resmi: lewati alat tanda tangan (butuh hak admin di Windows).
+  signAndEditExecutable: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target:
+    - target: dmg
+      arch: [universal]
+  category: public.app-category.productivity
+  identity: null
+  artifactName: Stock-Uploader-${version}-mac.${ext}

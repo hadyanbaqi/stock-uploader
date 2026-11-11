@@ -1,0 +1,38 @@
+{
+  "name": "stock-uploader",
+  "productName": "Stock Uploader",
+  "version": "0.1.0",
+  "description": "Uploader FTP/FTPS/SFTP pribadi untuk banyak akun microstock",
+  "private": true,
+  "main": "./out/main/index.js",
+  "author": "hadyanbaqi",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "test:conn": "node scripts/test-connection.mts",
+    "dist:win": "electron-vite build && electron-builder --win --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never"
+  },
+  "dependencies": {
+    "basic-ftp": "^5.0.5",
+    "ssh2-sftp-client": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/ssh2-sftp-client": "^9.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "ftp-srv": "^4.6.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ssh2": "^1.16.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}
