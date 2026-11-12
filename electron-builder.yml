@@ -12,6 +12,10 @@ files:
   - '!node_modules/ssh2/lib/protocol/crypto/build/**'
 npmRebuild: false
 asar: true
+# ExifTool harus berada di luar arsip supaya bisa dijalankan.
+asarUnpack:
+  - node_modules/exiftool-vendored.exe/**
+  - node_modules/exiftool-vendored.pl/**
 win:
   target:
     - target: nsis

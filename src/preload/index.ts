@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Api, QueueTask } from '../shared/types'
+import type { MetaRecord } from '../shared/metadata'
 
 const api: Api = {
   listAccounts: () => ipcRenderer.invoke('accounts:list'),
@@ -38,6 +39,23 @@ const api: Api = {
     ipcRenderer.on('history:changed', listener)
     return () => ipcRenderer.removeListener('history:changed', listener)
   },
+
+  metaList: (paths) => ipcRenderer.invoke('meta:list', paths),
+  metaUpdate: (path, patch) => ipcRenderer.invoke('meta:update', path, patch),
+  metaGenerate: (paths, overwrite) => ipcRenderer.invoke('meta:generate', paths, overwrite),
+  metaCancel: () => ipcRenderer.invoke('meta:cancel'),
+  metaInject: (paths) => ipcRenderer.invoke('meta:inject', paths),
+  metaExportCsv: (paths, agencies) => ipcRenderer.invoke('meta:exportCsv', paths, agencies),
+  onMetaRecord: (cb) => {
+    const listener = (_e: unknown, r: MetaRecord) => cb(r)
+    ipcRenderer.on('meta:record', listener)
+    return () => ipcRenderer.removeListener('meta:record', listener)
+  },
+  showInFolder: (path) => ipcRenderer.invoke('app:showInFolder', path),
+
+  hasAiKey: () => ipcRenderer.invoke('ai:hasKey'),
+  setAiKey: (key) => ipcRenderer.invoke('ai:setKey', key),
+  testAiKey: (key) => ipcRenderer.invoke('ai:testKey', key),
 
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s)

@@ -18,7 +18,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #0f1115;
     --panel: #171a21;
     --sidebar: #12151b;
@@ -35,6 +35,24 @@
     --shadow: none;
     color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --sidebar: #12151b;
+  --text: #e8eaee;
+  --muted: #98a0ad;
+  --border: #262b35;
+  --accent: #4f8bff;
+  --ok-bg: #0f2a1b;
+  --ok-text: #6fdc9b;
+  --fail-bg: #2e1414;
+  --fail-text: #ff8f8f;
+  --run-bg: #14203d;
+  --run-text: #9bb8ff;
+  --shadow: none;
+  color-scheme: dark;
 }
 
 * {
@@ -57,7 +75,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -139,6 +158,12 @@ nav {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 1px 7px;
+}
+
+.nav-bottom {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
 }
 
 .sidebar-foot {

@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react'
-import type { PickedFile, QueueTask } from '../../shared/types'
+import type { PickedFile, QueueTask, Settings } from '../../shared/types'
 import AccountsPage from './pages/AccountsPage'
 import HistoryPage from './pages/HistoryPage'
+import MetadataPage from './pages/MetadataPage'
 import QueuePage from './pages/QueuePage'
+import SettingsPage from './pages/SettingsPage'
 import UploadPage from './pages/UploadPage'
 
-type PageKey = 'upload' | 'queue' | 'accounts' | 'history'
+type PageKey = 'upload' | 'metadata' | 'queue' | 'history' | 'accounts' | 'settings'
 
-const PAGES: { key: PageKey; label: string; icon: string; ready: boolean }[] = [
-  { key: 'upload', label: 'Upload', icon: '⇪', ready: true },
-  { key: 'queue', label: 'Antrean', icon: '☰', ready: true },
-  { key: 'accounts', label: 'Akun', icon: '◉', ready: true },
-  { key: 'history', label: 'Riwayat', icon: '⟲', ready: true }
+const PAGES: { key: PageKey; label: string; icon: string }[] = [
+  { key: 'upload', label: 'Upload', icon: '⇪' },
+  { key: 'metadata', label: 'Metadata', icon: '✎' },
+  { key: 'queue', label: 'Antrean', icon: '☰' },
+  { key: 'history', label: 'Riwayat', icon: '⟲' },
+  { key: 'accounts', label: 'Akun', icon: '◉' },
+  { key: 'settings', label: 'Pengaturan', icon: '⚙' }
 ]
 
 function pageFromHash(): PageKey {
@@ -23,6 +27,7 @@ export default function App() {
   const [page, setPage] = useState<PageKey>(pageFromHash)
   const [files, setFiles] = useState<PickedFile[]>([])
   const [tasks, setTasks] = useState<QueueTask[]>([])
+  const [settings, setSettings] = useState<Settings | null>(null)
 
   useEffect(() => {
     const onHash = () => setPage(pageFromHash())
@@ -32,8 +37,25 @@ export default function App() {
 
   useEffect(() => {
     void window.api.queueList().then(setTasks)
+    void window.api.getSettings().then(setSettings)
     return window.api.onQueueChanged(setTasks)
   }, [])
+
+  // Dipakai tes otomatis: tambahkan file ke daftar Upload tanpa seret-lepas.
+  useEffect(() => {
+    const onTest = (e: Event) => {
+      void window.api.expandPaths((e as CustomEvent<string[]>).detail).then((r) => setFiles(r.files))
+    }
+    window.addEventListener('su-test-files', onTest)
+    return () => window.removeEventListener('su-test-files', onTest)
+  }, [])
+
+  // Tema: ikuti sistem, atau paksa terang/gelap.
+  useEffect(() => {
+    const root = document.documentElement
+    if (!settings || settings.theme === 'system') delete root.dataset.theme
+    else root.dataset.theme = settings.theme
+  }, [settings])
 
   const running = tasks.filter((t) => t.status === 'uploading' || t.status === 'queued' || t.status === 'retrying').length
   const failed = tasks.filter((t) => t.status === 'failed').length
@@ -49,19 +71,18 @@ export default function App() {
           {PAGES.map((p) => (
             <button
               key={p.key}
-              className={`nav-item ${page === p.key ? 'active' : ''}`}
+              className={`nav-item ${page === p.key ? 'active' : ''} ${p.key === 'settings' ? 'nav-bottom' : ''}`}
               onClick={() => setPage(p.key)}
             >
               <span className="nav-icon">{p.icon}</span>
               <span>{p.label}</span>
-              {!p.ready && <span className="soon">segera</span>}
               {p.key === 'upload' && files.length > 0 && <span className="badge">{files.length}</span>}
               {p.key === 'queue' && running > 0 && <span className="badge run">{running}</span>}
               {p.key === 'queue' && !running && failed > 0 && <span className="badge fail">{failed}</span>}
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">v0.3 · Tahap 3</div>
+        <div className="sidebar-foot">v{__APP_VERSION__}</div>
       </aside>
 
       <main className="content">
@@ -71,13 +92,18 @@ export default function App() {
             setFiles={setFiles}
             onQueued={() => setPage('queue')}
             onGoAccounts={() => setPage('accounts')}
+            onGoMetadata={() => setPage('metadata')}
           />
+        ) : page === 'metadata' ? (
+          <MetadataPage files={files} onGoUpload={() => setPage('upload')} onGoSettings={() => setPage('settings')} />
         ) : page === 'queue' ? (
           <QueuePage tasks={tasks} onGoUpload={() => setPage('upload')} />
+        ) : page === 'history' ? (
+          <HistoryPage />
         ) : page === 'accounts' ? (
           <AccountsPage />
         ) : (
-          <HistoryPage />
+          <SettingsPage settings={settings} onChange={setSettings} />
         )}
       </main>
     </div>

@@ -1,11 +1,16 @@
-import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerSaveBlocker, shell } from 'electron'
 import path from 'node:path'
 import { deleteAccount, encryptionAvailable, getPassword, listAccounts, saveAccount } from './accounts'
 import { testConnection } from './connection'
 import { expandPaths, FILE_KINDS } from './files'
 import { History, historyCsv } from './history'
 import { UploadQueue } from './queue'
-import { deleteGroup, getSettings, listGroups, saveGroup, saveSettings } from './store'
+import { deleteGroup, getAiKey, getSettings, listGroups, saveGroup, saveSettings, setAiKey } from './store'
+import { cancelGenerate, exportCsv, flushMeta, generate, inject, listMeta, updateMeta } from './metadata'
+import { closeHelper } from './frames'
+import { closeExifTool } from './inject'
+import { testApiKey } from './ai'
+import type { FileMeta } from '../shared/metadata'
 import type { AccountGroup, AccountInput, QueueAction, QueueTask, Settings } from '../shared/types'
 
 let queue: UploadQueue | null = null
@@ -101,7 +106,7 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     title: 'Stock Uploader',
-    backgroundColor: '#0f1115',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f1115' : '#f5f6f8',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -216,10 +221,35 @@ function registerIpc(): void {
   ipcMain.handle('queue:pauseAll', (_e, paused: boolean) => queue?.pauseAll(Boolean(paused)))
   ipcMain.handle('queue:clearDone', () => queue?.clearDone())
 
+  ipcMain.handle('meta:list', (_e, paths: string[]) => listMeta(paths.map(String)))
+  ipcMain.handle('meta:update', (_e, p: string, patch: Partial<FileMeta>) => updateMeta(String(p), patch))
+  ipcMain.handle('meta:generate', (_e, paths: string[], overwrite: boolean) => generate(paths.map(String), Boolean(overwrite)))
+  ipcMain.handle('meta:cancel', () => cancelGenerate())
+  ipcMain.handle('meta:inject', (_e, paths: string[]) => inject(paths.map(String)))
+  ipcMain.handle('meta:exportCsv', async (e, paths: string[], agencies: string[]) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Pilih folder untuk menyimpan CSV',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (r.canceled || !r.filePaths[0]) return null
+    return exportCsv(paths.map(String), agencies.map(String), r.filePaths[0])
+  })
+  ipcMain.handle('app:showInFolder', (_e, p: string) => shell.showItemInFolder(String(p)))
+
+  ipcMain.handle('ai:hasKey', async () => Boolean(await getAiKey()))
+  ipcMain.handle('ai:setKey', (_e, key: string) => setAiKey(String(key ?? '')))
+  ipcMain.handle('ai:testKey', async (_e, key?: string) => {
+    const k = key ? String(key).trim() : await getAiKey()
+    if (!k) return { ok: false, message: 'API key belum diisi.' }
+    return testApiKey(k)
+  })
+
   ipcMain.handle('settings:get', () => getSettings())
   ipcMain.handle('settings:save', async (_e, patch: Partial<Settings>) => {
     const s = await saveSettings(patch)
     queue?.setPerAccount(s.perAccount)
+    nativeTheme.themeSource = s.theme
     return s
   })
 
@@ -279,6 +309,7 @@ if (!gotLock) {
       app.quit()
       return
     }
+    nativeTheme.themeSource = (await getSettings()).theme
     queue = await startQueue()
     registerIpc()
     const win = createWindow()
@@ -302,7 +333,8 @@ if (!gotLock) {
     const q = queue
     queue = null
     e.preventDefault()
-    void q.shutdown().finally(() => app.quit())
+    closeHelper()
+    void Promise.allSettled([q.shutdown(), flushMeta(), closeExifTool()]).finally(() => app.quit())
   })
 
   app.on('window-all-closed', () => {

@@ -8,6 +8,7 @@ type Props = {
   setFiles: (f: PickedFile[]) => void
   onQueued: () => void
   onGoAccounts: () => void
+  onGoMetadata: () => void
 }
 
 const SELECTED_KEY = 'su.selectedAccounts'
@@ -20,7 +21,7 @@ function loadSelected(): Set<string> {
   }
 }
 
-export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: Props) {
+export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, onGoMetadata }: Props) {
   const [accounts, setAccounts] = useState<Account[] | null>(null)
   const [groups, setGroups] = useState<AccountGroup[]>([])
   const [selected, setSelected] = useState<Set<string>>(loadSelected)
@@ -226,6 +227,10 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: 
             <strong>
               {files.length} file · {formatBytes(totalSize)}
             </strong>
+            <span className="spacer" />
+            <button className="btn small" onClick={onGoMetadata} title="Buat judul, deskripsi, dan keyword dengan AI sebelum upload">
+              ✎ Buat metadata
+            </button>
             <button className="btn ghost small" onClick={() => (setFiles([]), setNote(''))}>
               Kosongkan
             </button>

@@ -1,3 +1,5 @@
+import type { AiMode, FileMeta, MetaRecord } from './metadata'
+
 export type Protocol = 'ftp' | 'ftps' | 'sftp'
 
 /** Akun seperti yang dilihat tampilan: password tidak pernah dikirim ke tampilan. */
@@ -115,6 +117,8 @@ export type AccountGroup = { id: string; name: string; accountIds: string[] }
 export type Settings = {
   /** Upload bersamaan per akun. */
   perAccount: number
+  aiMode: AiMode
+  theme: 'system' | 'light' | 'dark'
 }
 
 export type QueueAction = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove'
@@ -150,6 +154,20 @@ export type Api = {
   historyExport(ids: string[]): Promise<boolean>
   historyCheck(paths: string[], accountIds: string[]): Promise<SentCheck[]>
   onHistoryChanged(cb: () => void): () => void
+
+  metaList(paths: string[]): Promise<MetaRecord[]>
+  metaUpdate(path: string, patch: Partial<FileMeta>): Promise<MetaRecord>
+  metaGenerate(paths: string[], overwrite: boolean): Promise<{ queued: number; skipped: number }>
+  metaCancel(): Promise<void>
+  metaInject(paths: string[]): Promise<{ saved: number; csvOnly: number; failed: number }>
+  /** Pilih folder lalu simpan CSV untuk tiap agensi. null kalau dibatalkan. */
+  metaExportCsv(paths: string[], agencies: string[]): Promise<{ files: string[]; rows: number } | null>
+  onMetaRecord(cb: (r: MetaRecord) => void): () => void
+  showInFolder(path: string): Promise<void>
+
+  hasAiKey(): Promise<boolean>
+  setAiKey(key: string): Promise<void>
+  testAiKey(key?: string): Promise<{ ok: boolean; message: string }>
 
   getSettings(): Promise<Settings>
   saveSettings(s: Partial<Settings>): Promise<Settings>

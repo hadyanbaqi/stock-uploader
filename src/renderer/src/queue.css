@@ -518,3 +518,177 @@
 .upload-bar .check {
   color: var(--muted);
 }
+
+/* Tahap 4: Metadata dan Pengaturan */
+
+.meta-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meta-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.csv-row {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meta-card {
+  display: flex;
+  gap: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.meta-card.busy {
+  opacity: 0.7;
+}
+
+.meta-thumb {
+  align-self: flex-start;
+  width: 168px;
+  flex-shrink: 0;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.meta-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.meta-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meta-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-top .file-name {
+  flex: 0 1 auto;
+  font-weight: 600;
+}
+
+.mfield {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mfield > span {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.mfield em {
+  font-style: normal;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.mfield input,
+.mfield textarea,
+.mfield select,
+.text-input {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 7px 9px;
+  width: 100%;
+  resize: vertical;
+}
+
+.text-input.narrow {
+  width: 90px;
+}
+
+.meta-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.meta-row .mfield {
+  flex: 1;
+  min-width: 170px;
+}
+
+.ai-check {
+  padding-bottom: 8px;
+}
+
+.settings h2 {
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+
+.settings > p {
+  margin: 0 0 12px;
+}
+
+.setting-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.setting-label {
+  width: 160px;
+  flex-shrink: 0;
+  font-weight: 600;
+  padding-top: 7px;
+}
+
+.seg {
+  display: inline-flex;
+  background: var(--sidebar);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.seg button {
+  border: 0;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.seg button.on {
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}

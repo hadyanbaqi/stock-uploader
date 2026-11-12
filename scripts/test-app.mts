@@ -4,6 +4,7 @@
  * APP=<path aplikasi terpasang> untuk menguji hasil installer, bukan hasil build.
  */
 import { createHash, randomBytes } from 'node:crypto'
+import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
 import { createReadStream, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -37,6 +38,34 @@ const acc = (name: string, protocol: 'ftp' | 'ftps' | 'sftp', port: number, colo
   name, agency: 'other', protocol, host: '127.0.0.1', port, username: USER, password: PASS,
   remoteDir: '', color, enabled: true, allowInvalidCert: protocol === 'ftps'
 })
+// AI tiruan (pengganti Ciora) supaya tes tidak memakai kredit.
+const aiCalls: { model: string; images: number; bytes: number; text: string }[] = []
+const ai = createServer((req, res) => {
+  let body = ''
+  req.on('data', (d) => (body += d))
+  req.on('end', () => {
+    const j = JSON.parse(body || '{}')
+    const parts = j.messages?.[1]?.content ?? []
+    const imgs = parts.filter((c: { type: string }) => c.type === 'image_url')
+    const text = parts.filter((c: { type: string }) => c.type === 'text').map((c: { text: string }) => c.text).join(' ')
+    aiCalls.push({ model: j.model, images: imgs.length, bytes: imgs.reduce((s: number, c: { image_url: { url: string } }) => s + c.image_url.url.length, 0), text })
+    const isVideo = text.includes('video')
+    const answer = {
+      title: isVideo ? 'Colorful animated background with moving white circle' : 'Blue gradient abstract background',
+      description: 'Smooth color transition for design projects.',
+      keywords: ['background', 'abstract', 'blue', 'gradient', 'color', 'smooth', 'design', 'wallpaper', 'texture', 'bright', 'modern', 'pattern'],
+      adobeCategory: 8,
+      shutterstockCategories: ['Backgrounds/Textures'],
+      isAiGenerated: false
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(answer) } }] }))
+  })
+})
+await new Promise<void>((r) => ai.listen(0, '127.0.0.1', () => r()))
+const metaDir = path.join(work, 'meta')
+mkdirSync(metaDir)
+
 const out = path.join(work, 'hasil.json')
 const config = path.join(work, 'e2e.json')
 writeFileSync(config, JSON.stringify({
@@ -44,7 +73,8 @@ writeFileSync(config, JSON.stringify({
   files: videos,
   folder,
   out,
-  shots
+  shots,
+  metaDir
 }))
 
 const bin = process.env.APP ?? (require('electron') as string)
@@ -53,7 +83,7 @@ const t0 = Date.now()
 const code = await new Promise<number>((resolve) => {
   const child = spawn(bin, args, {
     stdio: 'inherit',
-    env: { ...process.env, SU_E2E: config, SU_USERDATA: path.join(work, 'data'), ELECTRON_RENDERER_URL: '' }
+    env: { ...process.env, SU_E2E: config, SU_AI_BASE: `http://127.0.0.1:${(ai.address() as { port: number }).port}/v1`, SU_USERDATA: path.join(work, 'data'), ELECTRON_RENDERER_URL: '' }
   })
   child.on('exit', (c) => resolve(c ?? 1))
 })
@@ -92,6 +122,43 @@ check('30 file di server identik', intact === 30, `${intact}/30`)
 check('riwayat mencatat 30 upload', r.history === 30, String(r.history))
 check('upload ulang file yang sama dilewati', r.readd?.added === 0 && r.readd?.alreadySent === 30, JSON.stringify(r.readd))
 console.log(`\nTangkapan layar: ${shots}`)
+
+// Metadata
+type MetaOut = {
+  videoMade: string | false
+  generate: { queued: number }
+  records: { name: string; status: string; title: string; keywords: number; tech?: string; error?: string; thumb: boolean }[]
+  inject: { saved: number; csvOnly: number; failed: number }
+  readBack: { title?: string; keywords: string[] }
+  csv: { files: string[]; rows: number }
+}
+const mo = (r as unknown as { meta?: MetaOut }).meta
+if (!mo) check('alur metadata berjalan', false)
+else {
+  const rec = (n: string) => mo.records.find((x) => x.name === n)
+  const jpg = rec('gradasi-biru.jpg')
+  const svg = rec('ikon-daun.svg')
+  const vid = rec('klip-warna.mp4')
+  check('JPG: metadata dibuat AI', jpg?.status === 'ready' && jpg.keywords >= 7 && jpg.thumb, JSON.stringify(jpg))
+  check('SVG: dibaca dan dibuatkan metadata', svg?.status === 'ready' && svg.thumb, JSON.stringify(svg))
+  check('video uji berhasil dibuat', mo.videoMade)
+  if (mo.videoMade) {
+    check('video: frame terbaca jadi lembar kontak', vid?.status === 'ready' && Boolean(vid.tech?.includes('contact sheet')), JSON.stringify(vid))
+    const vc = aiCalls.find((c) => c.text.includes('klip-warna'))
+    check('video: AI menerima 1 lembar kontak + data teknis', vc?.images === 1 && (vc?.bytes ?? 0) > 5000 && /\d+\.\d seconds/.test(vc?.text ?? ''), vc ? `${vc.images} gambar, ${vc.bytes} byte, "${vc.text.slice(0, 120)}"` : 'tidak ada')
+  }
+  check('API key terkirim ke model Hemat', aiCalls.every((c) => c.model === 'go/gemini-3.1-flash-lite'), aiCalls.map((c) => c.model).join(','))
+  const errs = (mo as unknown as { injectErrors: string[] }).injectErrors
+  // Perekam Chromium membuat MP4 terfragmen; ExifTool tidak bisa menulisinya, jadi yang dicek adalah pesannya.
+  const fragmented = errs.some((e) => e.includes('terfragmen'))
+  const realMp4 = String(mo.videoMade).startsWith('video/mp4') && !fragmented
+  console.log(`      (video uji dibuat sebagai ${mo.videoMade})`)
+  check(realMp4 ? 'tanam ke file: JPG + MP4 tertanam, SVG hanya CSV' : 'tanam ke file: JPG tertanam, SVG hanya CSV (video uji bukan MP4 asli)', mo.inject.saved === (realMp4 ? 2 : 1) && mo.inject.csvOnly === 1 && mo.inject.failed === (realMp4 ? 0 : 1) && (realMp4 || errs.length === 1), JSON.stringify(mo.inject) + ' ' + JSON.stringify((mo as unknown as { injectErrors: string[] }).injectErrors))
+  check('JPG: metadata terbaca kembali dari file', mo.readBack.title === 'Blue gradient abstract background' && mo.readBack.keywords.length >= 7, JSON.stringify(mo.readBack))
+  const adobeCsv = mo.csv.files.find((f) => f.includes('adobe'))
+  check('CSV Adobe + Shutterstock tersimpan', mo.csv.files.length === 2 && Boolean(adobeCsv) && readFileSync(adobeCsv!, 'utf8').split(String.fromCharCode(13, 10))[0] === 'Filename,Title,Keywords,Category,Releases', mo.csv.files.map((f) => path.basename(f)).join(', '))
+}
+ai.close()
 
 await ftp.srv.close()
 await ftps.srv.close()

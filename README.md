@@ -29,7 +29,18 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Filter per akun, hasil, tanggal, cari nama file; ekspor ke CSV
 - Hapus catatan supaya file bisa dikirim lagi ke akun itu
 
-Tahap berikutnya: Metadata AI (Ciora), Rapikan.
+**Tahap 4: Metadata AI (Ciora)** (selesai)
+
+- Halaman Metadata: judul, deskripsi, keyword, kategori Adobe & Shutterstock dibuat AI, bisa diedit
+- Video dilihat utuh: 9 frame jadi 1 lembar kontak (mode Hemat) atau 12 frame terpisah (mode Detail), plus data teknis (resolusi, durasi, loop, green screen)
+- Mode Hemat (go/gemini-3.1-flash-lite), Gratis (nemotron free, otomatis pindah ke Hemat kalau penuh), Detail
+- Aturan SEO otomatis: judul ≤70 karakter, keyword ≤49 tanpa dobel/merek, kata judul masuk 10 keyword pertama
+- Simpan ke file (ExifTool) untuk JPG, PNG, EPS, AI, MP4, MOV; file asli dicadangkan dulu
+- Download CSV untuk Adobe Stock, Shutterstock, Vecteezy, Freepik, Pond5, Dreamstime, 123RF
+- EPS/AI/ZIP dibaca lewat JPG pratinjau dengan nama sama
+- API key Ciora disimpan terenkripsi di Pengaturan
+
+Tahap berikutnya: Rapikan.
 
 ## Download installer
 
@@ -51,7 +62,8 @@ npm run dev          # jalankan aplikasi
 npm run typecheck    # cek tipe
 npm run test:conn    # tes koneksi ke server FTP/FTPS/SFTP lokal
 npm run test:upload  # tes antrean: putus, jeda, coba ulang (BIG=1 tambah file 500 MB)
-node scripts/test-app.mts  # tes aplikasi asli: 10 video ke 3 akun
+npm run test:meta    # tes metadata: aturan SEO, CSV, AI tiruan, ExifTool
+npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)
 ```

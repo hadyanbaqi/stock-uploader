@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, safeStorage } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
@@ -29,7 +29,25 @@ function jsonStore<T>(name: string, fallback: () => T) {
 }
 
 const groupsStore = jsonStore<{ groups: AccountGroup[] }>('groups.json', () => ({ groups: [] }))
-const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2 }))
+const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'system' }))
+const secretStore = jsonStore<{ aiKeyEnc?: string }>('secrets.json', () => ({}))
+
+/** API key AI, disimpan terenkripsi lewat brankas sistem seperti password FTP. */
+export async function getAiKey(): Promise<string | null> {
+  const enc = (await secretStore.read()).aiKeyEnc
+  if (!enc) return null
+  try {
+    return safeStorage.decryptString(Buffer.from(enc, 'base64'))
+  } catch {
+    return null
+  }
+}
+
+export async function setAiKey(key: string): Promise<void> {
+  const k = key.trim()
+  if (k && !safeStorage.isEncryptionAvailable()) throw new Error('Brankas password sistem tidak tersedia.')
+  await secretStore.write(k ? { aiKeyEnc: safeStorage.encryptString(k).toString('base64') } : {})
+}
 
 export async function listGroups(): Promise<AccountGroup[]> {
   return (await groupsStore.read()).groups
@@ -63,6 +81,8 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
   const cur = await settingsStore.read()
   const next: Settings = { ...cur }
   if (patch.perAccount !== undefined) next.perAccount = Math.max(1, Math.min(5, Math.round(Number(patch.perAccount) || 2)))
+  if (patch.aiMode && ['hemat', 'gratis', 'detail'].includes(patch.aiMode)) next.aiMode = patch.aiMode
+  if (patch.theme && ['system', 'light', 'dark'].includes(patch.theme)) next.theme = patch.theme
   await settingsStore.write(next)
   return next
 }
