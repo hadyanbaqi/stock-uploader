@@ -19,7 +19,7 @@ const api: Api = {
   deleteGroup: (id) => ipcRenderer.invoke('groups:delete', id),
 
   queueList: () => ipcRenderer.invoke('queue:list'),
-  queueAdd: (paths, accountIds) => ipcRenderer.invoke('queue:add', paths, accountIds),
+  queueAdd: (paths, accountIds, force) => ipcRenderer.invoke('queue:add', paths, accountIds, force),
   queueAction: (action, ids) => ipcRenderer.invoke('queue:action', action, ids),
   queuePauseAll: (paused) => ipcRenderer.invoke('queue:pauseAll', paused),
   queueClearDone: () => ipcRenderer.invoke('queue:clearDone'),
@@ -27,6 +27,16 @@ const api: Api = {
     const listener = (_e: unknown, tasks: QueueTask[]) => cb(tasks)
     ipcRenderer.on('queue:changed', listener)
     return () => ipcRenderer.removeListener('queue:changed', listener)
+  },
+
+  historyList: () => ipcRenderer.invoke('history:list'),
+  historyRemove: (ids) => ipcRenderer.invoke('history:remove', ids),
+  historyExport: (ids) => ipcRenderer.invoke('history:export', ids),
+  historyCheck: (paths, accountIds) => ipcRenderer.invoke('history:check', paths, accountIds),
+  onHistoryChanged: (cb) => {
+    const listener = () => cb()
+    ipcRenderer.on('history:changed', listener)
+    return () => ipcRenderer.removeListener('history:changed', listener)
   },
 
   getSettings: () => ipcRenderer.invoke('settings:get'),

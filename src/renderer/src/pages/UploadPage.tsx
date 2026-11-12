@@ -29,6 +29,8 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: 
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const [groupName, setGroupName] = useState<string | null>(null)
+  const [sent, setSent] = useState<Map<string, string[]>>(new Map())
+  const [force, setForce] = useState(false)
 
   useEffect(() => {
     void window.api.listAccounts().then(setAccounts)
@@ -57,6 +59,29 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: 
   }, [active])
 
   const totalSize = files.reduce((s, f) => s + f.size, 0)
+
+  // Tandai file yang sudah pernah berhasil dikirim ke akun yang dicentang.
+  const chosenKey = chosen.join(',')
+  useEffect(() => {
+    let stop = false
+    const timer = setTimeout(async () => {
+      if (!files.length || !chosen.length) return setSent(new Map())
+      const r = await window.api.historyCheck(
+        files.map((f) => f.path),
+        chosen
+      )
+      if (!stop) setSent(new Map(r.map((x) => [x.path, x.accountIds])))
+    }, 200)
+    return () => {
+      stop = true
+      clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, chosenKey])
+
+  const nameOf = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a.name])), [accounts])
+  const sentPairs = [...sent.values()].reduce((s, ids) => s + ids.length, 0)
+  const totalUploads = files.length * chosen.length - (force ? 0 : sentPairs)
 
   function merge(r: PickResult) {
     const known = new Set(files.map((f) => f.path))
@@ -118,9 +143,11 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: 
     try {
       const r: AddResult = await window.api.queueAdd(
         files.map((f) => f.path),
-        chosen
+        chosen,
+        force
       )
       const skipped = [
+        r.alreadySent && `${r.alreadySent} sudah pernah dikirim ke akun itu`,
         r.duplicates && `${r.duplicates} sudah ada di antrean`,
         r.sameName && `${r.sameName} punya nama sama dengan file lain ke akun yang sama`,
         r.missing && `${r.missing} filenya tidak ditemukan`
@@ -132,6 +159,7 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: 
       if (skipped.length) window.alert(`${r.added} upload masuk antrean.\nDilewati: ${skipped.join(', ')}.`)
       setFiles([])
       setNote('')
+      setForce(false)
       onQueued()
     } catch (err) {
       setError(cleanError(err))
@@ -209,6 +237,11 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: 
                 <span className="file-name" title={f.path}>
                   {f.name}
                 </span>
+                {sent.get(f.path) && (
+                  <span className="sent-tag" title={`Sudah pernah dikirim ke: ${sent.get(f.path)!.map((id) => nameOf.get(id) ?? id).join(', ')}`}>
+                    sudah ke {sent.get(f.path)!.length} akun
+                  </span>
+                )}
                 <span className="muted small">{formatBytes(f.size)}</span>
                 <button className="icon-btn" title="Hapus dari daftar" onClick={() => setFiles(files.filter((x) => x.path !== f.path))}>
                   ×
@@ -296,10 +329,17 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts }: 
 
       <footer className="upload-bar">
         <span>
-          {files.length} file × {chosen.length} akun = <strong>{files.length * chosen.length} upload</strong>
+          {files.length} file × {chosen.length} akun = <strong>{Math.max(0, totalUploads)} upload</strong>
+          {sentPairs > 0 && !force && <span className="muted small"> · {sentPairs} dilewati karena sudah pernah dikirim</span>}
         </span>
         <span className="spacer" />
-        <button className="btn primary big" disabled={busy || !files.length || !chosen.length} onClick={() => void upload()}>
+        {sentPairs > 0 && (
+          <label className="check">
+            <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
+            Kirim ulang yang sudah pernah
+          </label>
+        )}
+        <button className="btn primary big" disabled={busy || !files.length || !chosen.length || totalUploads <= 0} onClick={() => void upload()}>
           {busy ? 'Menambahkan…' : 'Upload'}
         </button>
       </footer>

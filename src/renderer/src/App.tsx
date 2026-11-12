@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { PickedFile, QueueTask } from '../../shared/types'
 import AccountsPage from './pages/AccountsPage'
+import HistoryPage from './pages/HistoryPage'
 import QueuePage from './pages/QueuePage'
 import UploadPage from './pages/UploadPage'
 
@@ -10,7 +11,7 @@ const PAGES: { key: PageKey; label: string; icon: string; ready: boolean }[] = [
   { key: 'upload', label: 'Upload', icon: '⇪', ready: true },
   { key: 'queue', label: 'Antrean', icon: '☰', ready: true },
   { key: 'accounts', label: 'Akun', icon: '◉', ready: true },
-  { key: 'history', label: 'Riwayat', icon: '⟲', ready: false }
+  { key: 'history', label: 'Riwayat', icon: '⟲', ready: true }
 ]
 
 function pageFromHash(): PageKey {
@@ -60,7 +61,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">v0.2 · Tahap 2</div>
+        <div className="sidebar-foot">v0.3 · Tahap 3</div>
       </aside>
 
       <main className="content">
@@ -76,10 +77,7 @@ export default function App() {
         ) : page === 'accounts' ? (
           <AccountsPage />
         ) : (
-          <div className="placeholder">
-            <h1>Riwayat</h1>
-            <p>Halaman ini dibuat di tahap berikutnya. Untuk sekarang, pantau upload di halaman Antrean.</p>
-          </div>
+          <HistoryPage />
         )}
       </main>
     </div>

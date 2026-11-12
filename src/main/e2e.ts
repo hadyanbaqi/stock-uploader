@@ -45,6 +45,16 @@ export async function runE2E(configPath: string, win: BrowserWindow, queue: Uplo
     await wait(800)
     await shot('3-antrean-selesai')
     result.tasks = queue.list()
+
+    // Cegah dobel: file yang sama ke akun yang sama harus dilewati.
+    await wait(500)
+    result.readd = await win.webContents.executeJavaScript(
+      `window.api.queueAdd(${JSON.stringify(cfg.files)}, ${JSON.stringify(ids)})`
+    )
+    result.history = await win.webContents.executeJavaScript(`window.api.historyList().then(h => h.length)`)
+    await win.webContents.executeJavaScript(`location.hash = 'history'`)
+    await wait(1200)
+    await shot('4-riwayat')
   } catch (err) {
     result.error = String((err as Error)?.stack ?? err)
   }

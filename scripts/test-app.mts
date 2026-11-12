@@ -70,7 +70,7 @@ const hash = (p: string) =>
   })
 
 check('aplikasi keluar normal', code === 0, `kode ${code}`)
-const r = JSON.parse(readFileSync(out, 'utf8')) as { expanded?: { files: number; skipped: number }; added?: { added: number }; tasks?: QueueTask[]; error?: string }
+const r = JSON.parse(readFileSync(out, 'utf8')) as { expanded?: { files: number; skipped: number }; added?: { added: number }; readd?: { added: number; alreadySent: number }; history?: number; tasks?: QueueTask[]; error?: string }
 if (r.error) console.log(r.error)
 check('isi folder terbaca, file non-stok dilewati', r.expanded?.files === 10 && r.expanded?.skipped === 1, JSON.stringify(r.expanded))
 check('30 upload masuk antrean', r.added?.added === 30, JSON.stringify(r.added))
@@ -89,6 +89,8 @@ for (const v of videos) {
   }
 }
 check('30 file di server identik', intact === 30, `${intact}/30`)
+check('riwayat mencatat 30 upload', r.history === 30, String(r.history))
+check('upload ulang file yang sama dilewati', r.readd?.added === 0 && r.readd?.alreadySent === 30, JSON.stringify(r.readd))
 console.log(`\nTangkapan layar: ${shots}`)
 
 await ftp.srv.close()

@@ -3,11 +3,13 @@ import path from 'node:path'
 import { deleteAccount, encryptionAvailable, getPassword, listAccounts, saveAccount } from './accounts'
 import { testConnection } from './connection'
 import { expandPaths, FILE_KINDS } from './files'
+import { History, historyCsv } from './history'
 import { UploadQueue } from './queue'
 import { deleteGroup, getSettings, listGroups, saveGroup, saveSettings } from './store'
 import type { AccountGroup, AccountInput, QueueAction, QueueTask, Settings } from '../shared/types'
 
 let queue: UploadQueue | null = null
+let history: History | null = null
 let blocker: number | null = null
 let quitting = false
 
@@ -43,10 +45,31 @@ function broadcast(tasks: QueueTask[]): void {
 
 async function startQueue(): Promise<UploadQueue> {
   const settings = await getSettings()
+  history = new History(path.join(app.getPath('userData'), 'history.jsonl'))
+  await history.init()
   const q = new UploadQueue({
     file: path.join(app.getPath('userData'), 'queue.json'),
     perAccount: settings.perAccount,
     onChange: broadcast,
+    wasSent: (id, name, size) => history?.wasSent(id, name, size) ?? false,
+    onFinished: (t, agency) => {
+      void history
+        ?.add({
+          fileName: t.fileName,
+          filePath: t.filePath,
+          size: t.size,
+          accountId: t.accountId,
+          accountName: t.accountName,
+          agency,
+          status: t.status === 'done' ? 'done' : 'failed',
+          at: Date.now(),
+          ms: t.lastAttemptMs,
+          error: t.status === 'done' ? undefined : t.error
+        })
+        .then(() => {
+          for (const w of BrowserWindow.getAllWindows()) w.webContents.send('history:changed')
+        })
+    },
     resolve: async (id) => {
       const acc = (await listAccounts()).find((a) => a.id === id)
       const password = acc ? await getPassword(id) : null
@@ -54,6 +77,7 @@ async function startQueue(): Promise<UploadQueue> {
       return {
         name: acc.name,
         color: acc.color,
+        agency: acc.agency,
         target: {
           protocol: acc.protocol,
           host: acc.host,
@@ -148,9 +172,43 @@ function registerIpc(): void {
   ipcMain.handle('groups:delete', (_e, id: string) => deleteGroup(String(id)))
 
   ipcMain.handle('queue:list', () => queue?.list() ?? [])
-  ipcMain.handle('queue:add', (_e, paths: string[], accountIds: string[]) =>
-    queue!.add(paths.map(String), accountIds.map(String))
+  ipcMain.handle('queue:add', (_e, paths: string[], accountIds: string[], force?: boolean) =>
+    queue!.add(paths.map(String), accountIds.map(String), Boolean(force))
   )
+
+  ipcMain.handle('history:list', () => history?.list() ?? [])
+  ipcMain.handle('history:remove', async (_e, ids: string[]) => {
+    await history?.remove(ids.map(String))
+  })
+  ipcMain.handle('history:export', async (e, ids: string[]) => {
+    const want = new Set(ids.map(String))
+    const rows = (history?.list() ?? []).filter((h) => want.has(h.id)).sort((a, b) => b.at - a.at)
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const stamp = new Date().toISOString().slice(0, 10)
+    const r = await dialog.showSaveDialog(win, {
+      defaultPath: path.join(app.getPath('documents'), `riwayat-upload-${stamp}.csv`),
+      filters: [{ name: 'CSV', extensions: ['csv'] }]
+    })
+    if (r.canceled || !r.filePath) return false
+    await import('node:fs/promises').then((fs) => fs.writeFile(r.filePath!, historyCsv(rows), 'utf8'))
+    return true
+  })
+  ipcMain.handle('history:check', async (_e, paths: string[], accountIds: string[]) => {
+    const fs = await import('node:fs/promises')
+    const out: { path: string; accountIds: string[] }[] = []
+    for (const p of paths.map(String)) {
+      let size: number
+      try {
+        size = (await fs.stat(p)).size
+      } catch {
+        continue
+      }
+      const name = path.basename(p)
+      const ids = accountIds.map(String).filter((id) => history?.wasSent(id, name, size))
+      if (ids.length) out.push({ path: p, accountIds: ids })
+    }
+    return out
+  })
   ipcMain.handle('queue:action', (_e, action: QueueAction, ids: string[]) => {
     if (!['pause', 'resume', 'cancel', 'retry', 'remove'].includes(action)) return
     queue?.action(action, ids.map(String))

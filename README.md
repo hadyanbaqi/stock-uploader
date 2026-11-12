@@ -22,7 +22,14 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Antrean tersimpan: kalau aplikasi ditutup, upload dilanjutkan saat dibuka lagi
 - Komputer tidak tidur selama upload berjalan
 
-Tahap berikutnya: Riwayat + cegah dobel, Metadata AI (Ciora), Rapikan.
+**Tahap 3: Riwayat + cegah dobel** (selesai)
+
+- Setiap upload berhasil/gagal dicatat (file, akun, waktu, hasil)
+- File yang sudah pernah dikirim ke akun yang sama (nama + ukuran) ditandai dan dilewati, kecuali dipilih "Kirim ulang"
+- Filter per akun, hasil, tanggal, cari nama file; ekspor ke CSV
+- Hapus catatan supaya file bisa dikirim lagi ke akun itu
+
+Tahap berikutnya: Metadata AI (Ciora), Rapikan.
 
 ## Download installer
 

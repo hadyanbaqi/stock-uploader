@@ -6,7 +6,7 @@ import type { ConnectionTarget } from './connection.ts'
 import { explainError } from './connection.ts'
 import { isPermanent, uploadFile, type UploadOptions, type UploadOutcome } from './transfer.ts'
 
-export type ResolvedAccount = { name: string; color: string; target: ConnectionTarget }
+export type ResolvedAccount = { name: string; color: string; agency?: string; target: ConnectionTarget }
 
 export type QueueDeps = {
   /** File JSON tempat antrean disimpan. */
@@ -14,6 +14,10 @@ export type QueueDeps = {
   /** Data akun + password; null kalau akun sudah dihapus. */
   resolve: (accountId: string) => Promise<ResolvedAccount | null>
   onChange: (tasks: QueueTask[]) => void
+  /** Dipanggil sekali saat tugas berhasil atau gagal permanen (untuk riwayat). */
+  onFinished?: (task: QueueTask, agency: string) => void
+  /** Sudah pernah berhasil dikirim ke akun ini? (cegah dobel) */
+  wasSent?: (accountId: string, fileName: string, size: number) => boolean
   upload?: (t: ConnectionTarget, localPath: string, opts: UploadOptions) => Promise<UploadOutcome>
   /** Jeda sebelum coba ulang ke-1, ke-2, ke-3 (ms). */
   retryDelays?: number[]
@@ -78,8 +82,8 @@ export class UploadQueue {
     this.pump()
   }
 
-  async add(paths: string[], accountIds: string[]): Promise<AddResult> {
-    const result: AddResult = { added: 0, duplicates: 0, sameName: 0, missing: 0 }
+  async add(paths: string[], accountIds: string[], force = false): Promise<AddResult> {
+    const result: AddResult = { added: 0, duplicates: 0, sameName: 0, missing: 0, alreadySent: 0 }
     const accounts = new Map<string, ResolvedAccount>()
     for (const id of new Set(accountIds)) {
       const acc = await this.deps.resolve(id)
@@ -98,6 +102,10 @@ export class UploadQueue {
       }
       const fileName = path.basename(filePath)
       for (const [accountId, acc] of accounts) {
+        if (!force && this.deps.wasSent?.(accountId, fileName, size)) {
+          result.alreadySent++
+          continue
+        }
         const pending = this.tasks.filter((t) => t.accountId === accountId && ACTIVE.includes(t.status))
         if (pending.some((t) => t.filePath === filePath)) {
           result.duplicates++
@@ -246,8 +254,11 @@ export class UploadQueue {
     this.changed(true)
 
     let sample = { at: Date.now(), bytes: t.sent }
+    let agency = ''
+    const attemptStart = Date.now()
     try {
       const acc = await this.deps.resolve(t.accountId)
+      agency = acc?.agency ?? ''
       if (!acc) throw Object.assign(new Error('Akun sudah dihapus atau password-nya hilang.'), { permanent: true, friendly: true })
       let st
       try {
@@ -283,6 +294,8 @@ export class UploadQueue {
       t.speed = 0
       t.finishedAt = Date.now()
       t.resumedFrom = out.resumedFrom > 0 ? out.resumedFrom : undefined
+      t.lastAttemptMs = Date.now() - attemptStart
+      this.deps.onFinished?.(t, agency)
     } catch (err) {
       t.speed = 0
       if (this.stopping) {
@@ -313,6 +326,7 @@ export class UploadQueue {
         } else {
           t.status = 'failed'
           t.finishedAt = Date.now()
+          this.deps.onFinished?.(t, agency)
         }
       }
     } finally {

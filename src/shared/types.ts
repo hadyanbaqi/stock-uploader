@@ -78,11 +78,37 @@ export type QueueTask = {
   resumedFrom?: number
   nextRetryAt?: number
   addedAt: number
+  /** Lama percobaan terakhir (ms). */
+  lastAttemptMs?: number
   startedAt?: number
   finishedAt?: number
 }
 
-export type AddResult = { added: number; duplicates: number; sameName: number; missing: number }
+export type AddResult = {
+  added: number
+  duplicates: number
+  sameName: number
+  missing: number
+  /** Dilewati karena sudah pernah berhasil dikirim ke akun itu. */
+  alreadySent: number
+}
+
+export type HistoryEntry = {
+  id: string
+  fileName: string
+  filePath: string
+  size: number
+  accountId: string
+  accountName: string
+  agency: string
+  status: 'done' | 'failed'
+  at: number
+  ms?: number
+  error?: string
+}
+
+/** File yang sudah pernah dikirim ke akun-akun tertentu. */
+export type SentCheck = { path: string; accountIds: string[] }
 
 export type AccountGroup = { id: string; name: string; accountIds: string[] }
 
@@ -112,11 +138,18 @@ export type Api = {
   deleteGroup(id: string): Promise<void>
 
   queueList(): Promise<QueueTask[]>
-  queueAdd(paths: string[], accountIds: string[]): Promise<AddResult>
+  queueAdd(paths: string[], accountIds: string[], force?: boolean): Promise<AddResult>
   queueAction(action: QueueAction, ids: string[]): Promise<void>
   queuePauseAll(paused: boolean): Promise<void>
   queueClearDone(): Promise<void>
   onQueueChanged(cb: (tasks: QueueTask[]) => void): () => void
+
+  historyList(): Promise<HistoryEntry[]>
+  historyRemove(ids: string[]): Promise<void>
+  /** Simpan riwayat terpilih ke file CSV (jendela simpan muncul). true kalau tersimpan. */
+  historyExport(ids: string[]): Promise<boolean>
+  historyCheck(paths: string[], accountIds: string[]): Promise<SentCheck[]>
+  onHistoryChanged(cb: () => void): () => void
 
   getSettings(): Promise<Settings>
   saveSettings(s: Partial<Settings>): Promise<Settings>

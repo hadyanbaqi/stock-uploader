@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { UploadQueue, type ResolvedAccount } from '../src/main/queue.ts'
 import { uploadFile } from '../src/main/transfer.ts'
+import { History, historyCsv } from '../src/main/history.ts'
 import type { ConnectionTarget } from '../src/main/connection.ts'
 import type { QueueTask } from '../src/shared/types.ts'
 
@@ -83,7 +84,13 @@ const accounts: Record<string, ResolvedAccount & { root: string }> = {
 type Hook = (t: ConnectionTarget, file: string, sent: number, size: number) => void
 const hooks: Hook[] = []
 const queueFile = path.join(work, 'queue.json')
+const history = new History(path.join(work, 'history.jsonl'))
+await history.init()
 const deps = {
+  wasSent: (id: string, name: string, size: number) => history.wasSent(id, name, size),
+  onFinished: (t: QueueTask, agency: string) => {
+    void history.add({ fileName: t.fileName, filePath: t.filePath, size: t.size, accountId: t.accountId, accountName: t.accountName, agency, status: t.status === 'done' ? 'done' : 'failed', at: Date.now(), ms: t.lastAttemptMs, error: t.error })
+  },
   file: queueFile,
   perAccount: 2,
   retryDelays: [300, 300, 300],
@@ -169,6 +176,8 @@ const pausedAt = q.list().find((t) => t.filePath === bigC)!.sent
 check('status berubah jadi dijeda', gotPaused, `berhenti di ${(pausedAt / 1048576).toFixed(1)} MB`)
 const r3 = await q.add([bigC], ['ftps'])
 check('file yang sedang dijeda tidak masuk dua kali', r3.added === 0)
+// Beri waktu server menutup file lama (seperti pengguna yang menekan Lanjut beberapa detik kemudian).
+await sleep(1500)
 q.pauseAll(false)
 await waitFor(q, (ts) => ts.every(finished), 60_000)
 const tc = q.list().find((t) => t.filePath === bigC)!
@@ -192,7 +201,7 @@ await q.add([videos[0]], ['salah'])
 mkdirSync(path.join(src, 'lain'))
 const twin = path.join(src, 'lain', path.basename(videos[1]))
 writeFileSync(twin, 'beda isi')
-await q.add([videos[1]], ['ftps'])
+await q.add([videos[1]], ['ftps'], true)
 const r4 = await q.add([twin], ['ftps'])
 check('file beda dengan nama sama ke akun yang sama ditolak', r4.sameName === 1, JSON.stringify(r4))
 await waitFor(q, (ts) => ts.every(finished), 60_000)
@@ -213,7 +222,30 @@ await q2.init()
 check('daftar tugas sama setelah dimuat ulang', q2.list().length === q.list().length, `${q2.list().length} tugas`)
 await q2.shutdown()
 
-// 6. file besar
+// 6. riwayat dan cegah dobel
+console.log('\n[6] Riwayat dan cegah dobel')
+await sleep(200)
+const h = history.list()
+check('riwayat mencatat semua upload yang selesai', h.filter((e) => e.status === 'done').length >= 34, `${h.length} catatan`)
+check('riwayat mencatat yang gagal', h.some((e) => e.status === 'failed' && e.accountId === 'salah'))
+const r6 = await q.add(videos, ['ftp', 'sftp'])
+check('file yang sudah pernah dikirim dilewati', r6.added === 0 && r6.alreadySent === 20, JSON.stringify(r6))
+const r6b = await q.add(videos.slice(0, 2), ['ftp'], true)
+check('bisa dipaksa kirim ulang', r6b.added === 2, JSON.stringify(r6b))
+await waitFor(q, (ts) => ts.every(finished), 60_000)
+await sleep(300)
+const h2 = new History(path.join(work, 'history.jsonl'))
+await h2.init()
+check('riwayat tersimpan di disk', h2.list().length === history.list().length && h2.wasSent('ftps', path.basename(videos[3]), statSync(videos[3]).size))
+const one = h2.list().find((e) => e.accountId === 'ftps' && e.fileName === path.basename(videos[3]))!
+await h2.remove([one.id])
+const h3 = new History(path.join(work, 'history.jsonl'))
+await h3.init()
+check('hapus dari riwayat = boleh dikirim lagi', !h3.wasSent('ftps', one.fileName, one.size) && h3.list().length === h2.list().length)
+const csv = historyCsv(h3.list())
+check('ekspor CSV riwayat', csv.split('\r\n').length === h3.list().length + 2 && csv.includes('Berhasil'))
+
+// 7. file besar
 if (BIG) {
   console.log('\n[6] File 500 MB lewat FTPS dan SFTP')
   q.clearDone()
