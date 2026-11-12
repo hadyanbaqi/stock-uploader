@@ -1,10 +1,76 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, powerSaveBlocker, shell } from 'electron'
 import path from 'node:path'
 import { deleteAccount, encryptionAvailable, getPassword, listAccounts, saveAccount } from './accounts'
 import { testConnection } from './connection'
-import type { AccountInput } from '../shared/types'
+import { expandPaths, FILE_KINDS } from './files'
+import { UploadQueue } from './queue'
+import { deleteGroup, getSettings, listGroups, saveGroup, saveSettings } from './store'
+import type { AccountGroup, AccountInput, QueueAction, QueueTask, Settings } from '../shared/types'
 
-function createWindow(): void {
+let queue: UploadQueue | null = null
+let blocker: number | null = null
+let quitting = false
+
+/** Selama ada upload, komputer tidak boleh tidur. */
+function updateKeepAwake(tasks: QueueTask[]): void {
+  const busy = tasks.some((t) => t.status === 'uploading' || t.status === 'queued' || t.status === 'retrying')
+  if (busy && blocker === null) blocker = powerSaveBlocker.start('prevent-app-suspension')
+  if (!busy && blocker !== null) {
+    powerSaveBlocker.stop(blocker)
+    blocker = null
+  }
+}
+
+/** true = boleh keluar. */
+function confirmQuit(win?: BrowserWindow): boolean {
+  const n = queue?.activeCount() ?? 0
+  if (!n) return true
+  const opts = {
+    type: 'question' as const,
+    buttons: ['Keluar', 'Batal'],
+    defaultId: 1,
+    cancelId: 1,
+    message: `Masih ada ${n} upload di antrean.`,
+    detail: 'Kalau keluar sekarang, upload berhenti dan otomatis dilanjutkan saat aplikasi dibuka lagi.'
+  }
+  return (win ? dialog.showMessageBoxSync(win, opts) : dialog.showMessageBoxSync(opts)) === 0
+}
+
+function broadcast(tasks: QueueTask[]): void {
+  updateKeepAwake(tasks)
+  for (const w of BrowserWindow.getAllWindows()) w.webContents.send('queue:changed', tasks)
+}
+
+async function startQueue(): Promise<UploadQueue> {
+  const settings = await getSettings()
+  const q = new UploadQueue({
+    file: path.join(app.getPath('userData'), 'queue.json'),
+    perAccount: settings.perAccount,
+    onChange: broadcast,
+    resolve: async (id) => {
+      const acc = (await listAccounts()).find((a) => a.id === id)
+      const password = acc ? await getPassword(id) : null
+      if (!acc || !password) return null
+      return {
+        name: acc.name,
+        color: acc.color,
+        target: {
+          protocol: acc.protocol,
+          host: acc.host,
+          port: acc.port,
+          username: acc.username,
+          password,
+          remoteDir: acc.remoteDir,
+          allowInvalidCert: acc.allowInvalidCert
+        }
+      }
+    }
+  })
+  await q.init()
+  return q
+}
+
+function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1180,
     height: 760,
@@ -19,6 +85,14 @@ function createWindow(): void {
       sandbox: true,
       nodeIntegration: false
     }
+  })
+
+  // Windows: menutup jendela = keluar, jadi tanya dulu kalau upload masih berjalan.
+  // Mac: menutup jendela tidak menghentikan upload; konfirmasi ada saat Quit.
+  win.on('close', (e) => {
+    if (process.platform === 'darwin' || quitting || process.env.SU_SMOKE) return
+    if (confirmQuit(win)) quitting = true
+    else e.preventDefault()
   })
 
   // Link luar dibuka di browser biasa, bukan di dalam aplikasi.
@@ -44,6 +118,7 @@ function createWindow(): void {
   } else {
     void win.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+  return win
 }
 
 function registerIpc(): void {
@@ -53,6 +128,41 @@ function registerIpc(): void {
   ipcMain.handle('app:encryptionAvailable', () => encryptionAvailable())
   ipcMain.handle('app:openExternal', (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url)
+  })
+
+  const extFilter = [{ name: 'File stok', extensions: Object.keys(FILE_KINDS) }]
+  ipcMain.handle('files:expand', (_e, paths: string[]) => expandPaths(Array.isArray(paths) ? paths.map(String) : []))
+  ipcMain.handle('files:pick', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const r = await dialog.showOpenDialog(win!, { properties: ['openFile', 'multiSelections'], filters: extFilter })
+    return expandPaths(r.canceled ? [] : r.filePaths)
+  })
+  ipcMain.handle('files:pickFolder', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'multiSelections'] })
+    return expandPaths(r.canceled ? [] : r.filePaths)
+  })
+
+  ipcMain.handle('groups:list', () => listGroups())
+  ipcMain.handle('groups:save', (_e, g: AccountGroup) => saveGroup(g))
+  ipcMain.handle('groups:delete', (_e, id: string) => deleteGroup(String(id)))
+
+  ipcMain.handle('queue:list', () => queue?.list() ?? [])
+  ipcMain.handle('queue:add', (_e, paths: string[], accountIds: string[]) =>
+    queue!.add(paths.map(String), accountIds.map(String))
+  )
+  ipcMain.handle('queue:action', (_e, action: QueueAction, ids: string[]) => {
+    if (!['pause', 'resume', 'cancel', 'retry', 'remove'].includes(action)) return
+    queue?.action(action, ids.map(String))
+  })
+  ipcMain.handle('queue:pauseAll', (_e, paused: boolean) => queue?.pauseAll(Boolean(paused)))
+  ipcMain.handle('queue:clearDone', () => queue?.clearDone())
+
+  ipcMain.handle('settings:get', () => getSettings())
+  ipcMain.handle('settings:save', async (_e, patch: Partial<Settings>) => {
+    const s = await saveSettings(patch)
+    queue?.setPerAccount(s.perAccount)
+    return s
   })
 
   ipcMain.handle('accounts:test', async (_e, input: AccountInput) => {
@@ -111,11 +221,30 @@ if (!gotLock) {
       app.quit()
       return
     }
+    queue = await startQueue()
     registerIpc()
-    createWindow()
+    const win = createWindow()
+    if (process.env.SU_E2E) {
+      quitting = true
+      void import('./e2e').then((m) => m.runE2E(process.env.SU_E2E!, win, queue!))
+    }
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
+  })
+
+  // Simpan antrean sebelum keluar.
+  app.on('before-quit', (e) => {
+    if (!queue) return
+    if (!quitting && !process.env.SU_SMOKE && !confirmQuit(BrowserWindow.getAllWindows()[0])) {
+      e.preventDefault()
+      return
+    }
+    quitting = true
+    const q = queue
+    queue = null
+    e.preventDefault()
+    void q.shutdown().finally(() => app.quit())
   })
 
   app.on('window-all-closed', () => {

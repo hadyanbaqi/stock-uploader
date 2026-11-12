@@ -1,0 +1,416 @@
+/* Tahap 2: halaman Upload dan Antrean */
+
+.badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: var(--border);
+  color: var(--text);
+}
+
+.badge.run {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.badge.fail {
+  background: var(--fail-bg);
+  color: var(--fail-text);
+}
+
+.btn.small {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+
+.btn.big {
+  padding: 10px 26px;
+  font-size: 15px;
+}
+
+.icon-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.upload-page {
+  padding-bottom: 96px;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 34px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.dropzone.compact {
+  padding: 18px 20px;
+}
+
+.dropzone.over {
+  border-color: var(--accent);
+  background: var(--run-bg);
+}
+
+.drop-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.drop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.drop-note {
+  margin-top: 6px;
+  color: var(--run-text);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.file-list {
+  max-height: 260px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ext {
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 2px 6px;
+  min-width: 42px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.ext-video {
+  background: var(--run-bg);
+  color: var(--run-text);
+  border-color: transparent;
+}
+
+.ext-vector {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-color: transparent;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+}
+
+.chip.on {
+  border-color: var(--accent);
+  background: var(--run-bg);
+}
+
+.chip-main,
+.chip-x {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 4px 4px 12px;
+  font-size: 13px;
+}
+
+.chip-x {
+  padding: 4px 10px 4px 4px;
+  color: var(--muted);
+}
+
+.group-new {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.group-new input {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 4px 8px;
+  width: 200px;
+}
+
+.pick-group {
+  margin-bottom: 10px;
+}
+
+.pick-agency {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.pick-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+}
+
+.pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  background: var(--bg);
+}
+
+.pick.on {
+  border-color: var(--accent);
+  background: var(--run-bg);
+}
+
+.pick-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-bar {
+  position: fixed;
+  left: 210px;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 32px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.inline-field select {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.overall-top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.overall-top strong {
+  font-size: 20px;
+}
+
+.bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.bar > div {
+  height: 100%;
+  background: var(--accent);
+}
+
+.bar.thin {
+  height: 5px;
+  margin: 6px 0 4px;
+}
+
+.st-paused .bar > div {
+  background: var(--muted);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--sidebar);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.tab {
+  border: 0;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tab.on {
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.task .dot {
+  margin-top: 4px;
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.task-acc {
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.st-done {
+  opacity: 0.75;
+}
+
+.pill {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.pill-uploading,
+.pill-retrying {
+  background: var(--run-bg);
+  color: var(--run-text);
+  border-color: transparent;
+}
+
+.pill-done {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-color: transparent;
+}
+
+.pill-failed {
+  background: var(--fail-bg);
+  color: var(--fail-text);
+  border-color: transparent;
+}

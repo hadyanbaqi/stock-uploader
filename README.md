@@ -12,7 +12,17 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Password disimpan terenkripsi lewat brankas sistem (Windows DPAPI / macOS Keychain)
 - Tes koneksi FTP, FTPS, SFTP dengan pesan error yang mudah dipahami
 
-Tahap berikutnya: Upload + Antrean, Riwayat + cegah dobel, Metadata AI (Ciora), Rapikan.
+**Tahap 2: Upload + Antrean** (selesai)
+
+- Seret file atau folder (MP4, MOV, JPG, PNG, EPS, AI, SVG, ZIP), atau pilih lewat tombol
+- Centang akun tujuan, atau simpan pilihan sebagai grup (mis. "Video")
+- Antrean dengan progress, kecepatan, dan sisa waktu; jeda, lanjut, batal, coba lagi
+- Upload bersamaan per akun bisa diatur (default 2)
+- Coba ulang otomatis 3x; FTP/FTPS melanjutkan dari bagian yang sudah terkirim
+- Antrean tersimpan: kalau aplikasi ditutup, upload dilanjutkan saat dibuka lagi
+- Komputer tidak tidur selama upload berjalan
+
+Tahap berikutnya: Riwayat + cegah dobel, Metadata AI (Ciora), Rapikan.
 
 ## Download installer
 
@@ -33,6 +43,8 @@ npm install
 npm run dev          # jalankan aplikasi
 npm run typecheck    # cek tipe
 npm run test:conn    # tes koneksi ke server FTP/FTPS/SFTP lokal
+npm run test:upload  # tes antrean: putus, jeda, coba ulang (BIG=1 tambah file 500 MB)
+node scripts/test-app.mts  # tes aplikasi asli: 10 video ke 3 akun
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)
 ```

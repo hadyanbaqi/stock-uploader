@@ -36,6 +36,9 @@ jobs:
       - name: Tes koneksi FTP/FTPS/SFTP (server lokal)
         run: npm run test:conn
 
+      - name: Tes antrean upload (putus, jeda, coba ulang)
+        run: npm run test:upload
+
       - name: Buat installer
         run: npm run ${{ matrix.dist }}
 
