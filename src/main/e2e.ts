@@ -1,7 +1,7 @@
 import { app, BrowserWindow, nativeImage } from 'electron'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { saveAccount } from './accounts'
+import { exportAccountsJson, importAccountsJson, saveAccount } from './accounts'
 import type { UploadQueue } from './queue'
 import type { AccountInput } from '../shared/types'
 import { setAiKey } from './store'
@@ -68,6 +68,16 @@ export async function runE2E(configPath: string, win: BrowserWindow, queue: Uplo
     await shot('4-riwayat')
 
     if (cfg.metaDir) result.meta = await metadataFlow(cfg, win, shot)
+
+    // Cadangan akun tanpa password.
+    const backup = await exportAccountsJson()
+    result.backup = { accounts: (JSON.parse(backup).accounts as unknown[]).length, hasSecret: /password|passwordEnc/i.test(backup.replace('Tanpa password. Isi password lagi setelah impor.', '')) }
+    result.reimport = await importAccountsJson(backup)
+
+    // Tema terang dipaksa dari Pengaturan.
+    await win.webContents.executeJavaScript(`window.api.saveSettings({ theme: 'light' }).then(() => { location.hash = 'accounts'; location.reload() })`)
+    await wait(2500)
+    await shot('7-akun-terang')
   } catch (err) {
     result.error = String((err as Error)?.stack ?? err)
   }

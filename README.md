@@ -40,7 +40,19 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - EPS/AI/ZIP dibaca lewat JPG pratinjau dengan nama sama
 - API key Ciora disimpan terenkripsi di Pengaturan
 
-Tahap berikutnya: Rapikan.
+**Tahap 5: Rapikan** (selesai, versi 1.0.0)
+
+- Ikon aplikasi, tema terang/gelap/ikuti sistem di Pengaturan
+- Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
+- Peringatan akun yang password-nya belum diisi
+
+## Cara pakai singkat
+
+1. **Akun**: tambah akun agensi, klik Tes koneksi, Simpan.
+2. **Pengaturan**: tempel API key Ciora (kalau mau metadata AI).
+3. **Upload**: seret file/folder, klik "Buat metadata" kalau perlu.
+4. **Metadata**: klik Buat metadata, cek/edit, lalu "Simpan ke file" dan "Download CSV".
+5. **Upload**: centang akun tujuan, klik Upload. Pantau di **Antrean**; semua tercatat di **Riwayat**.
 
 ## Download installer
 

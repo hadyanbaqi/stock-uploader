@@ -7,6 +7,8 @@ const api: Api = {
   saveAccount: (input) => ipcRenderer.invoke('accounts:save', input),
   deleteAccount: (id) => ipcRenderer.invoke('accounts:delete', id),
   testConnection: (input) => ipcRenderer.invoke('accounts:test', input),
+  exportAccounts: () => ipcRenderer.invoke('accounts:export'),
+  importAccounts: () => ipcRenderer.invoke('accounts:import'),
   encryptionAvailable: () => ipcRenderer.invoke('app:encryptionAvailable'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
 

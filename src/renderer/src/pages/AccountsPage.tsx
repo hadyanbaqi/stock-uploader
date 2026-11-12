@@ -12,6 +12,22 @@ export default function AccountsPage() {
   const [tests, setTests] = useState<Record<string, TestResult | 'running'>>({})
   const [secureOk, setSecureOk] = useState(true)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
+
+  async function exportBackup() {
+    if (await window.api.exportAccounts()) setInfo('Daftar akun disimpan (tanpa password). Simpan file ini di tempat aman.')
+  }
+
+  async function importBackup() {
+    try {
+      const r = await window.api.importAccounts()
+      if (!r) return
+      setInfo(`${r.added} akun diimpor${r.skipped ? `, ${r.skipped} dilewati (nama sudah ada)` : ''}. Isi password tiap akun lewat tombol Ubah.`)
+      await refresh()
+    } catch (err) {
+      setError(String((err as Error)?.message ?? err).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+    }
+  }
 
   const refresh = useCallback(async () => {
     setAccounts(await window.api.listAccounts())
@@ -67,10 +83,19 @@ export default function AccountsPage() {
             {accounts.length} akun · {enabledCount} aktif · {groups.length} agensi
           </p>
         </div>
-        <button className="btn primary" onClick={() => setForm({ mode: 'new' })} disabled={!secureOk}>
-          + Tambah akun
-        </button>
+        <div className="head-actions">
+          <button className="btn" onClick={() => void importBackup()} title="Masukkan daftar akun dari file cadangan">
+            Impor
+          </button>
+          <button className="btn" disabled={!accounts.length} onClick={() => void exportBackup()} title="Simpan daftar akun (tanpa password) ke file">
+            Ekspor
+          </button>
+          <button className="btn primary" onClick={() => setForm({ mode: 'new' })} disabled={!secureOk}>
+            + Tambah akun
+          </button>
+        </div>
       </header>
+      {info && <div className="banner info">{info}</div>}
 
       {!secureOk && (
         <div className="banner danger">
@@ -116,6 +141,7 @@ export default function AccountsPage() {
                         <span />
                       </label>
                     </div>
+                    {!a.hasPassword && <div className="test small fail">Password belum diisi. Klik Ubah untuk mengisi.</div>}
                     <div className="card-meta small">
                       <span>User: {a.username}</span>
                       {a.remoteDir && <span>Folder: {a.remoteDir}</span>}

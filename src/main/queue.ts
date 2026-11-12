@@ -259,7 +259,7 @@ export class UploadQueue {
     try {
       const acc = await this.deps.resolve(t.accountId)
       agency = acc?.agency ?? ''
-      if (!acc) throw Object.assign(new Error('Akun sudah dihapus atau password-nya hilang.'), { permanent: true, friendly: true })
+      if (!acc) throw Object.assign(new Error('Akun sudah dihapus, atau password-nya belum diisi (cek halaman Akun).'), { permanent: true, friendly: true })
       let st
       try {
         st = await fs.stat(t.filePath)

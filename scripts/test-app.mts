@@ -159,6 +159,9 @@ else {
   check('CSV Adobe + Shutterstock tersimpan', mo.csv.files.length === 2 && Boolean(adobeCsv) && readFileSync(adobeCsv!, 'utf8').split(String.fromCharCode(13, 10))[0] === 'Filename,Title,Keywords,Category,Releases', mo.csv.files.map((f) => path.basename(f)).join(', '))
 }
 ai.close()
+const rb = r as unknown as { backup?: { accounts: number; hasSecret: boolean }; reimport?: { added: number; skipped: number } }
+check('ekspor akun tanpa password', rb.backup?.accounts === 3 && rb.backup.hasSecret === false, JSON.stringify(rb.backup))
+check('impor ulang: nama yang sudah ada dilewati', rb.reimport?.added === 0 && rb.reimport?.skipped === 3, JSON.stringify(rb.reimport))
 
 await ftp.srv.close()
 await ftps.srv.close()

@@ -64,7 +64,13 @@ export default function App() {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">SU</span>
+          <span className="brand-mark" aria-hidden>
+            <svg viewBox="0 0 1024 1024" width="24" height="24">
+              <path d="M512 204 L716 418 L588 418 L588 584 L436 584 L436 418 L308 418 Z" fill="#fff" />
+              <rect x="232" y="640" width="560" height="64" rx="32" fill="#fff" opacity="0.7" />
+              <rect x="232" y="744" width="560" height="64" rx="32" fill="#fff" opacity="0.45" />
+            </svg>
+          </span>
           <span>Stock Uploader</span>
         </div>
         <nav>

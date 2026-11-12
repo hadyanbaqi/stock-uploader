@@ -131,3 +131,52 @@ export async function getPassword(id: string): Promise<string | null> {
   if (!acc?.passwordEnc) return null
   return decrypt(acc.passwordEnc)
 }
+
+/** Cadangan daftar akun TANPA password, untuk pindah ke komputer baru. */
+export async function exportAccountsJson(): Promise<string> {
+  const data = await load()
+  const accounts = data.accounts.map(({ passwordEnc: _p, id: _i, createdAt: _c, updatedAt: _u, ...rest }) => rest)
+  return JSON.stringify({ app: 'Stock Uploader', version: 1, note: 'Tanpa password. Isi password lagi setelah impor.', accounts }, null, 2)
+}
+
+/** Impor cadangan: akun masuk tanpa password (perlu diisi lagi). Nama yang sudah ada dilewati. */
+export async function importAccountsJson(text: string): Promise<{ added: number; skipped: number }> {
+  let parsed: { accounts?: Partial<AccountInput>[] }
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('File bukan cadangan akun Stock Uploader.')
+  }
+  if (!Array.isArray(parsed.accounts)) throw new Error('File bukan cadangan akun Stock Uploader.')
+  const data = await load()
+  const accounts = [...data.accounts]
+  const now = new Date().toISOString()
+  let added = 0
+  let skipped = 0
+  for (const a of parsed.accounts) {
+    try {
+      const fields = clean({
+        name: String(a.name ?? ''),
+        agency: String(a.agency ?? 'other'),
+        protocol: (['ftp', 'ftps', 'sftp'].includes(String(a.protocol)) ? a.protocol : 'ftp') as AccountInput['protocol'],
+        host: String(a.host ?? ''),
+        port: Number(a.port ?? 21),
+        username: String(a.username ?? ''),
+        remoteDir: String(a.remoteDir ?? ''),
+        color: /^#[0-9a-f]{6}$/i.test(String(a.color)) ? String(a.color) : '#2563eb',
+        enabled: a.enabled !== false,
+        allowInvalidCert: Boolean(a.allowInvalidCert)
+      })
+      if (accounts.some((x) => x.name.toLowerCase() === fields.name.toLowerCase())) {
+        skipped++
+        continue
+      }
+      accounts.push({ id: randomUUID(), ...fields, passwordEnc: null, createdAt: now, updatedAt: now })
+      added++
+    } catch {
+      skipped++
+    }
+  }
+  await persist({ version: 1, accounts })
+  return { added, skipped }
+}

@@ -128,6 +128,9 @@ export type Api = {
   saveAccount(input: AccountInput): Promise<Account>
   deleteAccount(id: string): Promise<void>
   testConnection(input: AccountInput): Promise<TestResult>
+  /** Simpan daftar akun tanpa password ke file. true kalau tersimpan. */
+  exportAccounts(): Promise<boolean>
+  importAccounts(): Promise<{ added: number; skipped: number } | null>
   encryptionAvailable(): Promise<boolean>
   openExternal(url: string): Promise<void>
 

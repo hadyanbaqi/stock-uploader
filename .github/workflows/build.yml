@@ -14,9 +14,11 @@ jobs:
           - os: windows-latest
             dist: dist:win
             files: dist/*.exe
+            app: dist/win-unpacked/Stock Uploader.exe
           - os: macos-latest
             dist: dist:mac
             files: dist/*.dmg
+            app: dist/mac-universal/Stock Uploader.app/Contents/MacOS/Stock Uploader
     runs-on: ${{ matrix.os }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -48,6 +50,12 @@ jobs:
 
       - name: Buat installer
         run: npm run ${{ matrix.dist }}
+
+      - name: Tes aplikasi hasil installer
+        run: node scripts/test-app.mts
+        env:
+          APP: ${{ github.workspace }}/${{ matrix.app }}
+        continue-on-error: true
 
       - uses: actions/upload-artifact@v4
         with:

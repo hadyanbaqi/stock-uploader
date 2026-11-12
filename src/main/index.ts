@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerSaveBlocker, shell } from 'electron'
 import path from 'node:path'
-import { deleteAccount, encryptionAvailable, getPassword, listAccounts, saveAccount } from './accounts'
+import { deleteAccount, encryptionAvailable, exportAccountsJson, getPassword, importAccountsJson, listAccounts, saveAccount } from './accounts'
 import { testConnection } from './connection'
 import { expandPaths, FILE_KINDS } from './files'
 import { History, historyCsv } from './history'
@@ -78,7 +78,8 @@ async function startQueue(): Promise<UploadQueue> {
     resolve: async (id) => {
       const acc = (await listAccounts()).find((a) => a.id === id)
       const password = acc ? await getPassword(id) : null
-      if (!acc || !password) return null
+      if (!acc) return null
+      if (!password) return null
       return {
         name: acc.name,
         color: acc.color,
@@ -106,6 +107,8 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     title: 'Stock Uploader',
+    // Ikon jendela saat dijalankan dari kode (installer memakai ikon dari build/icon.png).
+    icon: app.isPackaged ? undefined : path.join(__dirname, '../../build/icon.png'),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f1115' : '#f5f6f8',
     autoHideMenuBar: true,
     webPreferences: {
@@ -154,6 +157,23 @@ function registerIpc(): void {
   ipcMain.handle('accounts:list', () => listAccounts())
   ipcMain.handle('accounts:save', (_e, input: AccountInput) => saveAccount(input))
   ipcMain.handle('accounts:delete', (_e, id: string) => deleteAccount(id))
+  ipcMain.handle('accounts:export', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showSaveDialog(win, {
+      defaultPath: path.join(app.getPath('documents'), 'cadangan-akun-stock-uploader.json'),
+      filters: [{ name: 'Cadangan akun', extensions: ['json'] }]
+    })
+    if (r.canceled || !r.filePath) return false
+    await import('node:fs/promises').then(async (fs) => fs.writeFile(r.filePath!, await exportAccountsJson(), 'utf8'))
+    return true
+  })
+  ipcMain.handle('accounts:import', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Cadangan akun', extensions: ['json'] }] })
+    if (r.canceled || !r.filePaths[0]) return null
+    const text = await import('node:fs/promises').then((fs) => fs.readFile(r.filePaths[0], 'utf8'))
+    return importAccountsJson(text)
+  })
   ipcMain.handle('app:encryptionAvailable', () => encryptionAvailable())
   ipcMain.handle('app:openExternal', (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url)

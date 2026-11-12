@@ -111,7 +111,7 @@ textarea {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: var(--accent);
+  background: linear-gradient(135deg, #3b82f6, #4338ca);
   color: var(--accent-text);
   font-size: 12px;
   font-weight: 700;
