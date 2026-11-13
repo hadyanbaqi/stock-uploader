@@ -128,6 +128,8 @@ export type Settings = {
   genModel: string
   genAspect: string
   genAutoZip: boolean
+  /** Galeri dikosongkan tiap kali mulai membuat gambar baru. */
+  genClearOnStart: boolean
 }
 
 export type GenStatus = 'queued' | 'running' | 'ready' | 'saved' | 'discarded' | 'failed' | 'rejected' | 'canceled'
@@ -147,13 +149,14 @@ export type GenJob = {
   attempt: number
   error?: string
   createdAt: number
+  startedAt?: number
   finishedAt?: number
   width?: number
   height?: number
   savedPath?: string
 }
 
-export type GenBatch = { id: string; folder: string; autoZip: boolean; zipPath?: string; createdAt: number; refName?: string }
+export type GenBatch = { id: string; folder: string; autoZip: boolean; zipPath?: string; createdAt: number; refName?: string; /** Disembunyikan dari galeri (tetap ada di Riwayat). */ hidden?: boolean }
 
 export type GenStartInput = {
   prompts: string[]
@@ -163,6 +166,8 @@ export type GenStartInput = {
   aspect: string
   refPath?: string
   autoZip: boolean
+  /** Sembunyikan kelompok sebelumnya dari galeri sebelum mulai. */
+  clearPrevious?: boolean
 }
 
 /** Transparan: efek di latar polos → PNG transparan (+ JPG preview, PSD). */
@@ -265,6 +270,8 @@ export type Api = {
   /** Simpan semua gambar tersimpan di satu kelompok jadi ZIP. */
   genZip(batchId: string): Promise<{ zipPath: string; count: number }>
   genFull(id: string): Promise<string | null>
+  /** Kosongkan galeri: semua kelompok disembunyikan; discard = buang juga gambar yang belum disimpan dan hentikan yang masih antre. */
+  genClear(discard: boolean): Promise<void>
   genPickRef(): Promise<{ path: string; thumb: string } | null>
   genPickDir(): Promise<string | null>
   genDefaultDir(): Promise<string>

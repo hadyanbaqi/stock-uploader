@@ -106,6 +106,7 @@ export class GenQueue {
       createdAt: Date.now(),
       refName: input.refPath ? path.basename(input.refPath) : undefined
     }
+    if (input.clearPrevious) for (const b of this.data.batches) b.hidden = true
     this.data.batches.push(batch)
     for (const prompt of prompts) {
       for (let v = 0; v < variants; v++) {
@@ -163,6 +164,21 @@ export class GenQueue {
     this.changed()
     this.pump()
     for (const b of new Set(jobs.map((j) => j.batchId))) void this.checkBatch(b)
+  }
+
+  async clear(discard: boolean): Promise<void> {
+    for (const b of this.data.batches) b.hidden = true
+    if (discard) {
+      for (const j of this.data.jobs) {
+        if (j.status === 'queued') j.status = 'canceled'
+        else if (j.status === 'running') this.running.get(j.id)?.abort()
+        else if (j.status === 'ready') {
+          await this.dropRaw(j)
+          j.status = 'discarded'
+        }
+      }
+    }
+    this.changed()
   }
 
   /** Path gambar ukuran asli (data URL) untuk dilihat besar. */
@@ -243,6 +259,7 @@ export class GenQueue {
     const ctl = new AbortController()
     this.running.set(j.id, ctl)
     j.status = 'running'
+    j.startedAt = Date.now()
     j.attempt++
     j.error = undefined
     this.changed()

@@ -29,7 +29,7 @@ function jsonStore<T>(name: string, fallback: () => T) {
 }
 
 const groupsStore = jsonStore<{ groups: AccountGroup[] }>('groups.json', () => ({ groups: [] }))
-const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep', genDir: '', genModel: '', genAspect: '3:2', genAutoZip: true }))
+const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep', genDir: '', genModel: '', genAspect: '3:2', genAutoZip: true, genClearOnStart: true }))
 const secretStore = jsonStore<{ aiKeyEnc?: string }>('secrets.json', () => ({}))
 
 /** API key AI, disimpan terenkripsi lewat brankas sistem seperti password FTP. */
@@ -89,6 +89,7 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
   if (typeof patch.genModel === 'string') next.genModel = patch.genModel.slice(0, 200)
   if (patch.genAspect && ['16:9', '3:2', '4:3', '1:1', '9:16', '2:3'].includes(patch.genAspect)) next.genAspect = patch.genAspect
   if (patch.genAutoZip !== undefined) next.genAutoZip = Boolean(patch.genAutoZip)
+  if (patch.genClearOnStart !== undefined) next.genClearOnStart = Boolean(patch.genClearOnStart)
   await settingsStore.write(next)
   return next
 }

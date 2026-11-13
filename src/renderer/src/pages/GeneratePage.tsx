@@ -11,32 +11,31 @@ type Props = {
 }
 
 const ASPECTS = ['16:9', '3:2', '4:3', '1:1', '2:3', '9:16']
-const STATUS: Record<GenJob['status'], string> = {
-  queued: 'Menunggu',
-  running: 'Membuat…',
-  ready: 'Siap',
-  saved: 'Tersimpan',
-  discarded: 'Dibuang',
-  failed: 'Gagal',
-  rejected: 'Ditolak',
-  canceled: 'Dibatalkan'
-}
 const DRAFT_KEY = 'su.genDraft'
+const TPL_KEY = 'su.genTemplate'
+const PENDING: GenJob['status'][] = ['queued', 'running']
 
 function cleanError(err: unknown): string {
   return String((err as Error)?.message ?? err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 }
+function read(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) ?? fallback
+  } catch {
+    return fallback
+  }
+}
+function write(key: string, v: string): void {
+  try {
+    localStorage.setItem(key, v)
+  } catch {
+    // abaikan
+  }
+}
 
 export default function GeneratePage({ settings, onSettings, onToMetadata, onToAlpha, onGoSettings }: Props) {
-  const [tab, setTab] = useState<'make' | 'history'>('make')
-  const [text, setText] = useState(() => {
-    try {
-      return localStorage.getItem(DRAFT_KEY) ?? ''
-    } catch {
-      return ''
-    }
-  })
-  const [template, setTemplate] = useState('none')
+  const [text, setText] = useState(() => read(DRAFT_KEY, ''))
+  const [template, setTemplate] = useState(() => read(TPL_KEY, 'none'))
   const [variants, setVariants] = useState(1)
   const [ref, setRef] = useState<{ path: string; thumb: string } | null>(null)
   const [models, setModels] = useState<string[] | null>(null)
@@ -50,15 +49,11 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
   const [big, setBig] = useState<{ job: GenJob; url: string | null } | null>(null)
-  const [shownBatches, setShownBatches] = useState(5)
   const [showIdeas, setShowIdeas] = useState(false)
-
-  function addPrompts(list: string[], tpl: string) {
-    const have = new Set(text.split(/\r?\n/).map((l) => l.trim()))
-    const fresh = list.filter((p) => !have.has(p))
-    setText([text.trim(), ...fresh].filter(Boolean).join('\n'))
-    setTemplate(tpl)
-  }
+  const [more, setMore] = useState(false)
+  const [tab, setTab] = useState<'gallery' | 'history'>('gallery')
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [, tick] = useState(0)
 
   const prompts = useMemo(
     () =>
@@ -69,32 +64,18 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
     [text]
   )
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(DRAFT_KEY, text)
-    } catch {
-      // abaikan
-    }
-  }, [text])
+  useEffect(() => write(DRAFT_KEY, text), [text])
+  useEffect(() => write(TPL_KEY, template), [template])
 
   async function loadModels() {
     setModelError('')
     try {
-      const list = await window.api.genModels()
-      setModels(list)
+      setModels(await window.api.genModels())
     } catch (err) {
       setModels([])
       setModelError(cleanError(err))
     }
   }
-
-  // Model tersimpan tidak ada di daftar (atau belum dipilih): pakai yang pertama (termurah di urutan).
-  useEffect(() => {
-    if (settings && models?.length && !models.includes(settings.genModel)) {
-      void window.api.saveSettings({ genModel: models[0] }).then(onSettings)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [models, settings?.genModel])
 
   async function refresh() {
     const r = await window.api.genList()
@@ -121,22 +102,38 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Model tersimpan tidak ada di daftar (atau belum dipilih): pakai yang pertama (termurah di urutan).
+  useEffect(() => {
+    if (settings && models?.length && !models.includes(settings.genModel)) {
+      void window.api.saveSettings({ genModel: models[0] }).then(onSettings)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [models, settings?.genModel])
+
+  // Galeri: kelompok yang tidak disembunyikan, terbaru di atas; di dalamnya urut sesuai urutan prompt.
+  const shownBatches = useMemo(() => batches.filter((b) => !b.hidden).sort((a, b) => b.createdAt - a.createdAt), [batches])
   const byBatch = useMemo(() => {
     const m = new Map<string, GenJob[]>()
     for (const j of jobs) m.set(j.batchId, [...(m.get(j.batchId) ?? []), j])
     return m
   }, [jobs])
-  const visibleBatches = useMemo(
-    () => [...batches].sort((a, b) => b.createdAt - a.createdAt).filter((b) => byBatch.has(b.id)).slice(0, shownBatches),
-    [batches, byBatch, shownBatches]
-  )
+  const visible = useMemo(() => shownBatches.flatMap((b) => byBatch.get(b.id) ?? []), [shownBatches, byBatch])
+  const pending = visible.filter((j) => PENDING.includes(j.status))
+  const ready = visible.filter((j) => j.status === 'ready')
+  const saved = visible.filter((j) => j.status === 'saved')
+  const failed = visible.filter((j) => j.status === 'failed' || j.status === 'rejected')
+  const done = visible.filter((j) => !PENDING.includes(j.status)).length
 
-  // Ambil gambar kecil yang belum ada untuk kelompok yang terlihat.
+  // Detik berjalan untuk gambar yang sedang dibuat.
   useEffect(() => {
-    const need = visibleBatches
-      .flatMap((b) => byBatch.get(b.id) ?? [])
-      .filter((j) => (j.status === 'ready' || j.status === 'saved') && !thumbs.has(j.id))
-      .map((j) => j.id)
+    if (!pending.length) return
+    const t = setInterval(() => tick((n) => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [pending.length])
+
+  // Ambil gambar kecil yang belum ada.
+  useEffect(() => {
+    const need = visible.filter((j) => (j.status === 'ready' || j.status === 'saved') && !thumbs.has(j.id)).map((j) => j.id)
     if (!need.length) return
     void window.api.genThumbs(need).then((r) => {
       if (!Object.keys(r).length) return
@@ -146,7 +143,22 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
         return n
       })
     })
-  }, [visibleBatches, byBatch, thumbs])
+  }, [visible, thumbs])
+
+  // Pilihan yang sudah tidak terlihat dibuang.
+  useEffect(() => {
+    const ids = new Set(visible.map((j) => j.id))
+    setPicked((p) => {
+      const n = new Set([...p].filter((id) => ids.has(id)))
+      return n.size === p.size ? p : n
+    })
+  }, [visible])
+
+  function addPrompts(list: string[], tpl: string) {
+    const have = new Set(text.split(/\r?\n/).map((l) => l.trim()))
+    setText([text.trim(), ...list.filter((p) => !have.has(p))].filter(Boolean).join('\n'))
+    setTemplate(tpl)
+  }
 
   async function start() {
     if (!settings) return
@@ -161,9 +173,12 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
         model: settings.genModel,
         aspect: settings.genAspect,
         refPath: ref?.path,
-        autoZip: settings.genAutoZip
+        autoZip: settings.genAutoZip,
+        clearPrevious: settings.genClearOnStart
       })
-      setNote(`${r.queued} gambar masuk antrean.${settings.genAutoZip ? ' Setelah semua selesai, hasilnya otomatis disimpan dan di-ZIP.' : ''}`)
+      setPicked(new Set())
+      setTab('gallery')
+      setNote(`${r.queued} gambar sedang dibuat, berurutan dari prompt pertama.`)
     } catch (err) {
       setError(cleanError(err))
     } finally {
@@ -171,19 +186,33 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
     }
   }
 
-  const act = (a: GenAction, ids: string[]) => {
+  async function act(a: GenAction, ids: string[]) {
     if (!ids.length) return
-    void window.api.genAction(a, ids).catch((err) => setError(cleanError(err)))
-  }
-
-  async function zip(batchId: string) {
-    setError('')
     try {
-      const r = await window.api.genZip(batchId)
-      setNote(`${r.count} gambar di-ZIP.`)
+      await window.api.genAction(a, ids)
     } catch (err) {
       setError(cleanError(err))
     }
+  }
+
+  /** Simpan dulu yang belum tersimpan, lalu kirim path-nya ke halaman lain. */
+  async function sendTo(ids: string[], to: (paths: string[]) => void) {
+    const sel = visible.filter((j) => ids.includes(j.id))
+    const toKeep = sel.filter((j) => j.status === 'ready').map((j) => j.id)
+    if (toKeep.length) await act('keep', toKeep)
+    const r = await window.api.genList()
+    const paths = r.jobs.filter((j) => ids.includes(j.id) && j.savedPath).map((j) => j.savedPath!)
+    if (paths.length) to(paths)
+    else setError('Belum ada gambar yang selesai di pilihan ini.')
+  }
+
+  async function clearGallery() {
+    const unsaved = ready.length + pending.length
+    if (unsaved && !window.confirm(`Kosongkan galeri?\n${ready.length} gambar belum disimpan akan dibuang${pending.length ? ` dan ${pending.length} yang masih antre dihentikan` : ''}.\nGambar yang sudah tersimpan tetap ada di folder dan Riwayat.`)) return
+    await window.api.genClear(true)
+    setThumbs(new Map())
+    setPicked(new Set())
+    setNote('')
   }
 
   async function open(job: GenJob) {
@@ -191,134 +220,150 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
     setBig({ job, url: await window.api.genFull(job.id) })
   }
 
+  function togglePick(id: string) {
+    setPicked((p) => {
+      const n = new Set(p)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+
   const save = async (patch: Partial<Settings>) => onSettings(await window.api.saveSettings(patch))
   const total = prompts.length * variants
   const tpl = GEN_TEMPLATES.find((t) => t.key === template)
+  const pickedIds = [...picked]
+  const pickedJobs = visible.filter((j) => picked.has(j.id))
+  const pct = visible.length ? Math.floor((done / visible.length) * 100) : 0
 
   return (
-    <div className="page gen-page">
-      <header className="page-head">
-        <div>
+    <div className="page page-wide gen2">
+      {/* ---------- Kiri: panel buat gambar ---------- */}
+      <aside className="gen2-left panel">
+        <div className="gen2-title">
           <h1>Buat Gambar</h1>
-          <p className="muted">Prompt → gambar AI lewat Ciora → simpan JPG siap stok → metadata → upload.</p>
+          <span className="muted small">lewat Ciora</span>
         </div>
-        <div className="seg">
-          <button className={tab === 'make' ? 'on' : ''} onClick={() => setTab('make')}>
-            Buat
-          </button>
-          <button className={tab === 'history' ? 'on' : ''} onClick={() => setTab('history')}>
-            Riwayat
-          </button>
-        </div>
-      </header>
 
-      {hasKey === false && (
-        <div className="banner danger">
-          API key Ciora belum diisi.{' '}
-          <button className="link" onClick={onGoSettings}>
-            Isi di Pengaturan
-          </button>
-        </div>
-      )}
-      {error && <div className="banner danger">{error}</div>}
-      {note && <div className="banner info">{note}</div>}
+        {hasKey === false && (
+          <div className="banner danger small">
+            API key Ciora belum diisi.{' '}
+            <button className="link" onClick={onGoSettings}>
+              Isi di Pengaturan
+            </button>
+          </div>
+        )}
 
-      {tab === 'history' ? (
-        <History jobs={jobs} onOpen={(j) => void open(j)} />
-      ) : (
-        <>
-          <section className="panel gen-form">
-            <div className="panel-head">
-              <strong>1. Prompt</strong>
-              <span className="muted small">Satu prompt per baris · {prompts.length} prompt</span>
-              <span className="spacer" />
-              <button className="btn small" onClick={() => setShowIdeas(!showIdeas)}>
-                {showIdeas ? 'Tutup contoh VFX' : '✦ Contoh prompt VFX'}
+        <div className="gen2-block">
+          <div className="gen2-label">
+            <span>Prompt</span>
+            <span className="muted small">{prompts.length} prompt · satu per baris</span>
+          </div>
+          <textarea
+            className="gen-prompts"
+            rows={9}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={'Tempel satu atau banyak prompt, satu per baris.'}
+            spellCheck={false}
+          />
+          <div className="gen2-row">
+            <button className="btn small" onClick={() => setShowIdeas(!showIdeas)}>
+              {showIdeas ? 'Tutup contoh' : '✦ Contoh prompt VFX'}
+            </button>
+            <span className="spacer" />
+            {text && (
+              <button className="btn ghost small" onClick={() => setText('')}>
+                Hapus prompt
               </button>
-              {text && (
-                <button className="btn ghost small" onClick={() => setText('')}>
-                  Kosongkan
-                </button>
-              )}
-            </div>
-            {showIdeas && (
-              <div className="gen-ideas">
-                <div className="muted small">
-                  Klik kelompok untuk menambahkan promptnya. Template otomatis jadi "VFX latar hitam" — hasilnya nanti dikirim ke halaman Transparan.
-                </div>
-                <div className="chips">
-                  {VFX_PROMPTS.map((g) => (
-                    <button key={g.group} className="chip-btn" onClick={() => addPrompts(g.prompts, 'vfx-black')} title={g.prompts.join('\n')}>
-                      + {g.group} ({g.prompts.length})
-                    </button>
-                  ))}
-                  <button className="chip-btn" onClick={() => addPrompts(VFX_PROMPTS.flatMap((g) => g.prompts), 'vfx-black')}>
-                    + Semua ({VFX_PROMPTS.reduce((n, g) => n + g.prompts.length, 0)})
-                  </button>
-                  <button className="chip-btn" onClick={() => addPrompts(DARK_FX_PROMPTS, 'vfx-white')} title={DARK_FX_PROMPTS.join('\n')}>
-                    + Asap/tinta gelap ({DARK_FX_PROMPTS.length})
-                  </button>
-                </div>
-              </div>
             )}
-            <textarea
-              className="gen-prompts"
-              rows={6}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={'Tempel satu atau banyak prompt, satu per baris.\nContoh:\nGolden autumn forest with soft morning fog\nMinimal flat lay of coffee beans on beige background'}
-              spellCheck={false}
-            />
-            <div className="gen-row">
-              <span className="small">Gaya:</span>
-              <div className="chips">
-                {GEN_TEMPLATES.map((t) => (
-                  <button key={t.key} className={`chip-btn ${template === t.key ? 'on' : ''}`} onClick={() => setTemplate(t.key)} title={t.hint}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {tpl && <div className="muted small">{tpl.hint}</div>}
-            <div className="gen-row">
-              <label className="inline-field small">
-                Variasi per prompt
-                <select value={variants} onChange={(e) => setVariants(Number(e.target.value))}>
-                  {[1, 2, 3, 4].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <span className="spacer" />
-              {ref ? (
-                <span className="gen-ref">
-                  <img src={ref.thumb} alt="" />
-                  <span className="small">Referensi: {ref.path.split(/[\\/]/).pop()}</span>
-                  <button className="icon-btn" title="Hapus referensi" onClick={() => setRef(null)}>
-                    ×
-                  </button>
-                </span>
-              ) : (
-                <button className="btn small" onClick={async () => setRef(await window.api.genPickRef())} title="Gambar contoh untuk diubah atau ditiru gayanya">
-                  + Gambar referensi
+          </div>
+          {showIdeas && (
+            <div className="chips gen2-ideas">
+              {VFX_PROMPTS.map((g) => (
+                <button key={g.group} className="chip-btn" onClick={() => addPrompts(g.prompts, 'vfx-black')} title={g.prompts.join('\n')}>
+                  + {g.group}
                 </button>
-              )}
+              ))}
+              <button className="chip-btn" onClick={() => addPrompts(VFX_PROMPTS.flatMap((g) => g.prompts), 'vfx-black')}>
+                + Semua VFX
+              </button>
+              <button className="chip-btn" onClick={() => addPrompts(DARK_FX_PROMPTS, 'vfx-white')} title={DARK_FX_PROMPTS.join('\n')}>
+                + Asap/tinta gelap
+              </button>
             </div>
-          </section>
+          )}
+        </div>
 
-          {settings && (
-            <section className="panel">
-              <div className="panel-head">
-                <strong>2. Pengaturan</strong>
-              </div>
-              <div className="gen-settings">
+        <div className="gen2-block">
+          <label className="gen2-label" htmlFor="gen-tpl">
+            <span>Gaya</span>
+          </label>
+          <select id="gen-tpl" value={template} onChange={(e) => setTemplate(e.target.value)}>
+            {GEN_TEMPLATES.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          {tpl?.hint && <div className="muted small">{tpl.hint}</div>}
+        </div>
+
+        {settings && (
+          <div className="gen2-block">
+            <span className="gen2-label">
+              <span>Rasio</span>
+            </span>
+            <div className="seg gen2-aspect">
+              {ASPECTS.map((a) => (
+                <button key={a} className={settings.genAspect === a ? 'on' : ''} onClick={() => void save({ genAspect: a })}>
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="gen2-block gen2-two">
+          <label className="mfield">
+            <span>Variasi</span>
+            <select value={variants} onChange={(e) => setVariants(Number(e.target.value))}>
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n} per prompt
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="mfield">
+            <span>Referensi</span>
+            {ref ? (
+              <span className="gen-ref">
+                <img src={ref.thumb} alt="" />
+                <button className="icon-btn" title="Hapus referensi" onClick={() => setRef(null)}>
+                  ×
+                </button>
+              </span>
+            ) : (
+              <button className="btn small" onClick={async () => setRef(await window.api.genPickRef())}>
+                + Gambar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {settings && (
+          <>
+            <button className="gen2-more link" onClick={() => setMore(!more)}>
+              {more ? '▾' : '▸'} Model, folder & opsi
+            </button>
+            {more && (
+              <div className="gen2-block">
                 <label className="mfield">
                   <span>Model</span>
                   <div className="field-row">
                     <select className="grow" value={settings.genModel} onChange={(e) => void save({ genModel: e.target.value })} disabled={!models?.length}>
-                      {!models && <option value={settings.genModel}>Memuat daftar model…</option>}
+                      {!models && <option value={settings.genModel}>Memuat…</option>}
                       {models?.length === 0 && <option value="">Tidak ada model gambar</option>}
                       {models?.map((m) => (
                         <option key={m} value={m}>
@@ -326,21 +371,11 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
                         </option>
                       ))}
                     </select>
-                    <button className="btn small" onClick={() => void loadModels()} title="Ambil ulang daftar model dari Ciora">
+                    <button className="btn small" onClick={() => void loadModels()} title="Ambil ulang daftar model">
                       ↻
                     </button>
                   </div>
                 </label>
-                <div className="mfield">
-                  <span>Rasio</span>
-                  <div className="seg">
-                    {ASPECTS.map((a) => (
-                      <button key={a} className={settings.genAspect === a ? 'on' : ''} onClick={() => void save({ genAspect: a })}>
-                        {a}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <div className="mfield">
                   <span>Folder simpan</span>
                   <div className="field-row">
@@ -350,55 +385,190 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
                     <button
                       className="btn small"
                       onClick={async () => {
-                        const d = await window.api.genPickDir()
-                        if (d) onSettings(await window.api.getSettings())
+                        if (await window.api.genPickDir()) onSettings(await window.api.getSettings())
                       }}
                     >
                       Ganti
                     </button>
                   </div>
                 </div>
+                <label className="check small">
+                  <input type="checkbox" checked={settings.genAutoZip} onChange={(e) => void save({ genAutoZip: e.target.checked })} />
+                  Simpan semua + ZIP otomatis setelah selesai
+                </label>
+                <label className="check small">
+                  <input type="checkbox" checked={settings.genClearOnStart} onChange={(e) => void save({ genClearOnStart: e.target.checked })} />
+                  Kosongkan galeri tiap mulai baru (tidak menumpuk)
+                </label>
               </div>
-              {modelError && <div className="small danger-text">{modelError}</div>}
-              {models?.length === 0 && !modelError && (
-                <div className="small danger-text">Akun Ciora ini tidak menyediakan model pembuat gambar.</div>
-              )}
-              <label className="check" style={{ marginTop: 10 }}>
-                <input type="checkbox" checked={settings.genAutoZip} onChange={(e) => void save({ genAutoZip: e.target.checked })} />
-                Setelah semua selesai: simpan semua hasil sebagai JPG lalu buat ZIP otomatis
-              </label>
-              <div className="muted small" style={{ marginTop: 4 }}>
-                Gambar di bawah 4 MP diperbesar otomatis ke ±6 MP (syarat minimal Adobe), JPG kualitas 95, dan ditandai "AI generatif".
-              </div>
-            </section>
-          )}
+            )}
+            {!more && <div className="muted small gen2-model">{settings.genModel || 'Model belum dipilih'}</div>}
+          </>
+        )}
+        {modelError && <div className="small danger-text">{modelError}</div>}
+        {models?.length === 0 && !modelError && <div className="small danger-text">Akun Ciora ini tidak menyediakan model pembuat gambar.</div>}
 
-          <div className="gen-go">
-            <button className="btn primary big" disabled={busy || !total || !hasKey || !settings?.genModel} onClick={() => void start()}>
-              {busy ? 'Menambahkan…' : `Buat ${total || ''} gambar`}
+        <div className="gen2-go">
+          <button className="btn primary big" disabled={busy || !total || !hasKey || !settings?.genModel} onClick={() => void start()}>
+            {busy ? 'Menambahkan…' : total ? `Buat ${total} gambar` : 'Tulis prompt dulu'}
+          </button>
+        </div>
+      </aside>
+
+      {/* ---------- Kanan: hasil ---------- */}
+      <section className="gen2-right">
+        <div className="gen2-head">
+          <div className="seg">
+            <button className={tab === 'gallery' ? 'on' : ''} onClick={() => setTab('gallery')}>
+              Galeri {visible.length ? visible.length : ''}
+            </button>
+            <button className={tab === 'history' ? 'on' : ''} onClick={() => setTab('history')}>
+              Riwayat
             </button>
           </div>
-
-          {visibleBatches.map((b) => (
-            <BatchView
-              key={b.id}
-              batch={b}
-              jobs={byBatch.get(b.id) ?? []}
-              thumbs={thumbs}
-              act={act}
-              zip={zip}
-              open={open}
-              onToMetadata={onToMetadata}
-              onToAlpha={onToAlpha}
-            />
-          ))}
-          {batches.length > shownBatches && (
-            <button className="btn ghost" onClick={() => setShownBatches((n) => n + 5)}>
-              Tampilkan kelompok sebelumnya
+          {tab === 'gallery' && visible.length > 0 && (
+            <span className="muted small">
+              {saved.length} tersimpan · {ready.length} belum disimpan{failed.length > 0 && ` · ${failed.length} gagal`}
+            </span>
+          )}
+          <span className="spacer" />
+          {tab === 'gallery' && visible.length > 0 && (
+            <button className="btn small ghost danger-text" onClick={() => void clearGallery()}>
+              Kosongkan
             </button>
           )}
-        </>
-      )}
+        </div>
+
+        {error && <div className="banner danger">{error}</div>}
+        {note && <div className="banner info">{note}</div>}
+
+        {tab === 'history' ? (
+          <History jobs={jobs} onOpen={(j) => void open(j)} />
+        ) : !visible.length ? (
+          <div className="gen2-empty">
+            <div className="gen2-empty-art">✦</div>
+            <h2>Belum ada gambar</h2>
+            <p className="muted">Tulis prompt di kiri (atau pakai contoh prompt VFX), lalu klik Buat. Gambar muncul di sini satu per satu sesuai urutan.</p>
+          </div>
+        ) : (
+          <>
+            {pending.length > 0 && (
+              <div className="panel overall gen2-progress">
+                <div className="overall-top">
+                  <strong>{pct}%</strong>
+                  <span className="muted small">
+                    {done} dari {visible.length} gambar selesai · {pending.filter((j) => j.status === 'running').length} sedang dibuat
+                  </span>
+                  <span className="spacer" />
+                  <button className="btn small" onClick={() => void act('cancel', pending.map((j) => j.id))}>
+                    Hentikan
+                  </button>
+                </div>
+                <div className="bar">
+                  <div style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            )}
+
+            <div className="gen2-bulk">
+              <label className="check small">
+                <input
+                  type="checkbox"
+                  checked={picked.size > 0 && picked.size === visible.length}
+                  ref={(el) => {
+                    if (el) el.indeterminate = picked.size > 0 && picked.size < visible.length
+                  }}
+                  onChange={(e) => setPicked(e.target.checked ? new Set(visible.map((j) => j.id)) : new Set())}
+                />
+                {picked.size ? `${picked.size} dipilih` : 'Pilih semua'}
+              </label>
+              <span className="spacer" />
+              {picked.size > 0 ? (
+                <>
+                  <button className="btn small" onClick={() => void act('keep', pickedIds)} disabled={!pickedJobs.some((j) => j.status === 'ready')}>
+                    ✓ Simpan
+                  </button>
+                  <button className="btn small" onClick={() => void act('discard', pickedIds)} disabled={!pickedJobs.some((j) => j.status === 'ready')}>
+                    ✕ Buang
+                  </button>
+                  <button className="btn small" onClick={() => void act('again', pickedIds)}>
+                    ↻ Buat lagi
+                  </button>
+                  <button className="btn small" onClick={() => void sendTo(pickedIds, onToAlpha)}>
+                    ◐ Transparan
+                  </button>
+                  <button className="btn small primary" onClick={() => void sendTo(pickedIds, onToMetadata)}>
+                    ✎ Metadata
+                  </button>
+                </>
+              ) : (
+                <>
+                  {failed.length > 0 && (
+                    <button className="btn small" onClick={() => void act('retry', failed.map((j) => j.id))}>
+                      Coba lagi yang gagal
+                    </button>
+                  )}
+                  {ready.length > 0 && (
+                    <button className="btn small" onClick={() => void act('keep', ready.map((j) => j.id))}>
+                      ✓ Simpan semua ({ready.length})
+                    </button>
+                  )}
+                  {saved.length > 0 &&
+                    shownBatches.map((b) =>
+                      (byBatch.get(b.id) ?? []).some((j) => j.status === 'saved') ? (
+                        <button
+                          key={b.id}
+                          className="btn small"
+                          title={b.zipPath ?? 'ZIP dari semua gambar tersimpan di kelompok ini'}
+                          onClick={async () => {
+                            try {
+                              const r = await window.api.genZip(b.id)
+                              setNote(`${r.count} gambar di-ZIP: ${r.zipPath}`)
+                            } catch (err) {
+                              setError(cleanError(err))
+                            }
+                          }}
+                        >
+                          ZIP{shownBatches.length > 1 ? ` ${b.folder.slice(-4)}` : ''}
+                        </button>
+                      ) : null
+                    )}
+                </>
+              )}
+            </div>
+
+            {shownBatches.map((b) => {
+              const list = byBatch.get(b.id) ?? []
+              if (!list.length) return null
+              return (
+                <div key={b.id} className="gen2-batch">
+                  {shownBatches.length > 1 && (
+                    <div className="muted small gen2-batch-head">
+                      {b.folder} · {new Date(b.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} · {list.length} gambar
+                      {b.zipPath && ' · ZIP ✓'}
+                    </div>
+                  )}
+                  <div className="gen2-grid">
+                    {list.map((j, i) => (
+                      <Card
+                        key={j.id}
+                        job={j}
+                        n={i + 1}
+                        thumb={thumbs.get(j.id)}
+                        picked={picked.has(j.id)}
+                        onPick={() => togglePick(j.id)}
+                        onOpen={() => void open(j)}
+                        act={(a) => void act(a, [j.id])}
+                        onAlpha={() => void sendTo([j.id], onToAlpha)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </>
+        )}
+      </section>
 
       {big && (
         <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setBig(null)}>
@@ -410,10 +580,27 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
               </button>
             </header>
             {big.url ? <img src={big.url} alt="" /> : <div className="muted">{big.job.status === 'discarded' ? 'Gambar sudah dibuang.' : 'Memuat…'}</div>}
-            <div className="muted small">
-              {big.job.model} · {big.job.aspect}
-              {big.job.width ? ` · ${big.job.width}×${big.job.height}` : ''}
-              {big.job.savedPath ? ` · ${big.job.savedPath}` : ''}
+            <div className="field-row">
+              <span className="muted small grow">
+                {big.job.model} · {big.job.aspect}
+                {big.job.width ? ` · ${big.job.width}×${big.job.height}` : ''}
+                {big.job.savedPath ? ` · ${big.job.savedPath}` : ''}
+              </span>
+              {big.job.status === 'ready' && (
+                <>
+                  <button className="btn small primary" onClick={() => void act('keep', [big.job.id]).then(() => setBig(null))}>
+                    ✓ Simpan
+                  </button>
+                  <button className="btn small" onClick={() => void act('discard', [big.job.id]).then(() => setBig(null))}>
+                    ✕ Buang
+                  </button>
+                </>
+              )}
+              {big.job.savedPath && (
+                <button className="btn small" onClick={() => void window.api.showInFolder(big.job.savedPath!)}>
+                  Buka folder
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -422,141 +609,98 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
   )
 }
 
-function BatchView({
-  batch,
-  jobs,
-  thumbs,
+function Card({
+  job: j,
+  n,
+  thumb,
+  picked,
+  onPick,
+  onOpen,
   act,
-  zip,
-  open,
-  onToMetadata,
-  onToAlpha
+  onAlpha
 }: {
-  batch: GenBatch
-  jobs: GenJob[]
-  thumbs: Map<string, string>
-  act: (a: GenAction, ids: string[]) => void
-  zip: (id: string) => Promise<void>
-  open: (j: GenJob) => Promise<void>
-  onToMetadata: (paths: string[]) => void
-  onToAlpha: (paths: string[]) => void
+  job: GenJob
+  n: number
+  thumb?: string
+  picked: boolean
+  onPick: () => void
+  onOpen: () => void
+  act: (a: GenAction) => void
+  onAlpha: () => void
 }) {
-  const isFx = jobs.some((j) => j.template.startsWith('vfx'))
-  const n = (s: GenJob['status'][]) => jobs.filter((j) => s.includes(j.status))
-  const pending = n(['queued', 'running'])
-  const ready = n(['ready'])
-  const saved = n(['saved'])
-  const failed = n(['failed', 'rejected', 'canceled'])
-  const done = jobs.length - pending.length
-  const pct = jobs.length ? Math.floor((done / jobs.length) * 100) : 0
-  const when = new Date(batch.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
-
+  const secs = j.status === 'running' && j.startedAt ? Math.max(0, Math.round((Date.now() - j.startedAt) / 1000)) : 0
+  const hasImg = (j.status === 'ready' || j.status === 'saved') && thumb
   return (
-    <section className="panel gen-batch">
-      <div className="panel-head">
-        <strong>{batch.folder}</strong>
-        <span className="muted small">
-          {when} · {jobs.length} gambar · {saved.length} tersimpan
-          {ready.length > 0 && ` · ${ready.length} menunggu dipilih`}
-          {failed.length > 0 && ` · ${failed.length} gagal`}
-        </span>
-        <span className="spacer" />
-        {pending.length > 0 && (
-          <button className="btn small ghost" onClick={() => act('cancel', pending.map((j) => j.id))}>
-            Hentikan
-          </button>
-        )}
-        {failed.length > 0 && (
-          <button className="btn small" onClick={() => act('retry', failed.map((j) => j.id))}>
-            Coba lagi yang gagal
-          </button>
-        )}
-        {ready.length > 0 && (
-          <button className="btn small" onClick={() => act('keep', ready.map((j) => j.id))}>
-            Simpan semua ({ready.length})
-          </button>
-        )}
-        {saved.length > 0 && (
-          <>
-            <button className="btn small" onClick={() => void zip(batch.id)} title={batch.zipPath ?? 'Buat ZIP dari semua gambar tersimpan'}>
-              {batch.zipPath ? 'ZIP ulang' : 'Simpan jadi ZIP'}
-            </button>
-            <button
-              className={`btn small ${isFx ? 'primary' : ''}`}
-              onClick={() => onToAlpha(saved.map((j) => j.savedPath!).filter(Boolean))}
-              title="Kirim ke halaman Transparan: PNG transparan + JPG preview + PSD"
-            >
-              Jadikan transparan ({saved.length})
-            </button>
-            <button className={`btn small ${isFx ? '' : 'primary'}`} onClick={() => onToMetadata(saved.map((j) => j.savedPath!).filter(Boolean))}>
-              Buat metadata ({saved.length})
-            </button>
-          </>
-        )}
-      </div>
-      {pending.length > 0 && (
-        <div className="overall-top" style={{ marginBottom: 10 }}>
-          <div className="bar grow">
-            <div style={{ width: `${pct}%` }} />
+    <article className={`gc g-${j.status} ${picked ? 'picked' : ''}`}>
+      <div className="gc-img" style={{ aspectRatio: j.aspect.replace(':', ' / ') }}>
+        {hasImg ? (
+          <img src={thumb} alt="" onClick={onOpen} />
+        ) : j.status === 'running' ? (
+          <div className="gc-load">
+            <span className="gc-spin" />
+            <span>Membuat… {secs}s</span>
           </div>
-          <span className="muted small">
-            {done} dari {jobs.length} selesai
-          </span>
-        </div>
-      )}
-      {batch.zipPath && (
-        <div className="muted small" style={{ marginBottom: 8 }}>
-          ZIP: {batch.zipPath}
-        </div>
-      )}
-      <div className="gen-grid">
-        {jobs.map((j) => (
-          <article key={j.id} className={`gen-card g-${j.status}`}>
-            <button className="gen-img" style={{ aspectRatio: j.aspect.replace(':', ' / ') }} onClick={() => void open(j)} disabled={!thumbs.get(j.id)}>
-              {thumbs.get(j.id) ? (
-                <img src={thumbs.get(j.id)} alt="" />
-              ) : (
-                <span className={`gen-state ${j.status === 'running' ? 'spin' : ''}`}>{STATUS[j.status]}</span>
-              )}
-              {j.status === 'saved' && <span className="gen-badge">✓ Tersimpan</span>}
+        ) : j.status === 'queued' ? (
+          <div className="gc-load wait">
+            <span>Antre</span>
+          </div>
+        ) : (j.status === 'ready' || j.status === 'saved') && !thumb ? (
+          <div className="gc-load">
+            <span className="gc-spin" />
+          </div>
+        ) : (
+          <div className={`gc-load ${j.status === 'failed' || j.status === 'rejected' ? 'bad' : 'wait'}`}>
+            <span>{j.status === 'failed' ? 'Gagal' : j.status === 'rejected' ? 'Ditolak' : j.status === 'discarded' ? 'Dibuang' : 'Dibatalkan'}</span>
+            {j.error && <span className="gc-err">{j.error}</span>}
+          </div>
+        )}
+        <label className="gc-check" title="Pilih">
+          <input type="checkbox" checked={picked} onChange={onPick} />
+        </label>
+        <span className="gc-num">#{n}</span>
+        {j.status === 'saved' && <span className="gen-badge gc-saved">✓</span>}
+        <div className="gc-actions">
+          {j.status === 'ready' && (
+            <>
+              <button title="Simpan" onClick={() => act('keep')}>
+                ✓
+              </button>
+              <button title="Buang" onClick={() => act('discard')}>
+                ✕
+              </button>
+            </>
+          )}
+          {(j.status === 'ready' || j.status === 'saved') && (
+            <>
+              <button title="Jadikan transparan" onClick={onAlpha}>
+                ◐
+              </button>
+              <button title="Lihat besar" onClick={onOpen}>
+                ⤢
+              </button>
+            </>
+          )}
+          {(j.status === 'failed' || j.status === 'rejected' || j.status === 'canceled') && (
+            <button title="Coba lagi" onClick={() => act('retry')}>
+              ↻
             </button>
-            <div className="gen-prompt small" title={j.prompt}>
-              {j.prompt}
-            </div>
-            {j.error && j.status !== 'saved' && <div className="small danger-text">{j.error}</div>}
-            <div className="gen-actions">
-              {j.status === 'ready' && (
-                <>
-                  <button className="btn small primary" onClick={() => act('keep', [j.id])}>
-                    ✓ Simpan
-                  </button>
-                  <button className="btn small" onClick={() => act('discard', [j.id])}>
-                    ✕ Buang
-                  </button>
-                </>
-              )}
-              {(j.status === 'failed' || j.status === 'rejected' || j.status === 'canceled') && (
-                <button className="btn small" onClick={() => act('retry', [j.id])}>
-                  Coba lagi
-                </button>
-              )}
-              {j.status === 'queued' && (
-                <button className="btn small ghost" onClick={() => act('cancel', [j.id])}>
-                  Batal
-                </button>
-              )}
-              <span className="spacer" />
-              <button className="icon-btn" title="Buat lagi dengan prompt yang sama" onClick={() => act('again', [j.id])}>
-                ↻
-              </button>
-              <button className="icon-btn" title="Salin prompt" onClick={() => void navigator.clipboard.writeText(j.prompt)}>
-                ⧉
-              </button>
-            </div>
-          </article>
-        ))}
+          )}
+          {j.status === 'queued' && (
+            <button title="Batal" onClick={() => act('cancel')}>
+              ✕
+            </button>
+          )}
+          {!['queued', 'running'].includes(j.status) && (
+            <button title="Buat lagi dengan prompt yang sama" onClick={() => act('again')}>
+              ↻+
+            </button>
+          )}
+        </div>
       </div>
-    </section>
+      <div className="gc-cap" title={j.prompt}>
+        {j.prompt}
+      </div>
+    </article>
   )
 }
 
@@ -566,13 +710,21 @@ function History({ jobs, onOpen }: { jobs: GenJob[]; onOpen: (j: GenJob) => void
     const s = q.trim().toLowerCase()
     return [...jobs].sort((a, b) => b.createdAt - a.createdAt).filter((j) => !s || j.prompt.toLowerCase().includes(s))
   }, [jobs, q])
-  const savedCount = jobs.filter((j) => j.status === 'saved').length
+  const STATUS: Record<GenJob['status'], string> = {
+    queued: 'Menunggu',
+    running: 'Membuat…',
+    ready: 'Siap',
+    saved: 'Tersimpan',
+    discarded: 'Dibuang',
+    failed: 'Gagal',
+    rejected: 'Ditolak',
+    canceled: 'Dibatalkan'
+  }
   return (
     <section className="panel">
       <div className="panel-head">
-        <strong>Riwayat</strong>
         <span className="muted small">
-          {jobs.length} gambar diminta · {savedCount} tersimpan
+          {jobs.length} gambar diminta · {jobs.filter((j) => j.status === 'saved').length} tersimpan
         </span>
         <span className="spacer" />
         <input className="text-input" placeholder="Cari prompt…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -583,7 +735,6 @@ function History({ jobs, onOpen }: { jobs: GenJob[]; onOpen: (j: GenJob) => void
             <tr>
               <th>Waktu</th>
               <th>Prompt</th>
-              <th>Model</th>
               <th>Status</th>
               <th>File</th>
             </tr>
@@ -595,7 +746,6 @@ function History({ jobs, onOpen }: { jobs: GenJob[]; onOpen: (j: GenJob) => void
                 <td className="cell-file small" title={j.prompt}>
                   {j.prompt}
                 </td>
-                <td className="small nowrap">{j.model}</td>
                 <td>
                   <span className={`pill pill-${j.status === 'saved' ? 'done' : j.status === 'failed' || j.status === 'rejected' ? 'failed' : j.status === 'running' ? 'uploading' : ''}`}>
                     {STATUS[j.status]}

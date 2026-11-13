@@ -301,7 +301,8 @@ function registerIpc(): void {
       model: String(input?.model ?? ''),
       aspect: String(input?.aspect ?? '3:2'),
       refPath: input?.refPath ? String(input.refPath) : undefined,
-      autoZip: Boolean(input?.autoZip)
+      autoZip: Boolean(input?.autoZip),
+      clearPrevious: Boolean(input?.clearPrevious)
     })
   )
   ipcMain.handle('gen:list', () => gen?.list() ?? { jobs: [], batches: [] })
@@ -315,6 +316,7 @@ function registerIpc(): void {
     shell.showItemInFolder(r.zipPath)
     return r
   })
+  ipcMain.handle('gen:clear', (_e, discard: boolean) => gen?.clear(Boolean(discard)))
   ipcMain.handle('gen:full', (_e, id: string) => gen?.full(String(id)) ?? null)
   ipcMain.handle('gen:pickRef', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)!

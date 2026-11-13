@@ -73,6 +73,7 @@ const api: Api = {
   genAction: (action, ids) => ipcRenderer.invoke('gen:action', action, ids),
   genZip: (batchId) => ipcRenderer.invoke('gen:zip', batchId),
   genFull: (id) => ipcRenderer.invoke('gen:full', id),
+  genClear: (discard) => ipcRenderer.invoke('gen:clear', discard),
   genPickRef: () => ipcRenderer.invoke('gen:pickRef'),
   genPickDir: () => ipcRenderer.invoke('gen:pickDir'),
   genDefaultDir: () => ipcRenderer.invoke('gen:defaultDir'),
