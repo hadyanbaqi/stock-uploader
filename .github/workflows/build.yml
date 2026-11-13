@@ -50,6 +50,9 @@ jobs:
       - name: Tes Buat Gambar (Ciora tiruan, nama file, ZIP)
         run: npm run test:gen
 
+      - name: Tes Transparan (alpha, PNG, PSD)
+        run: npm run test:alpha
+
       - name: Tes aplikasi asli (upload, riwayat, metadata)
         timeout-minutes: 10
         run: npm run test:app

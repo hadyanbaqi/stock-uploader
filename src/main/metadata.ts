@@ -314,3 +314,9 @@ export async function aiFlags(paths: string[]): Promise<string[]> {
   const all = await load()
   return paths.filter((p) => all[p]?.aiGenerated)
 }
+
+/** Metadata tersimpan untuk satu file (tanpa membuat baru). */
+export async function getMeta(p: string): Promise<FileMeta | null> {
+  const r = (await load())[p]
+  return r ?? null
+}

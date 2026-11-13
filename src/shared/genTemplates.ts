@@ -2,6 +2,20 @@
 export const GEN_TEMPLATES: { key: string; label: string; hint: string; suffix: string }[] = [
   { key: 'none', label: 'Tanpa template', hint: 'Prompt dikirim apa adanya (tetap tanpa teks/watermark).', suffix: '' },
   {
+    key: 'vfx-black',
+    label: 'VFX latar hitam',
+    hint: 'Efek bercahaya (api, petir, partikel, cahaya) di hitam pekat — siap dijadikan PNG transparan di halaman Transparan.',
+    suffix:
+      'Isolated visual effect only, on a pure solid black background (#000000). Bright glowing light energy with high contrast, fine soft glow falloff, sharp detail. Nothing else in the frame: no floor, no ground, no reflection, no shadow, no vignette, no smoke haze over the background, no frame. Effect centered with empty black margin around it, nothing touching the edges.'
+  },
+  {
+    key: 'vfx-white',
+    label: 'Asap/tinta latar putih',
+    hint: 'Efek gelap (asap hitam, tinta, debu, retakan) di putih bersih — untuk PNG transparan efek gelap.',
+    suffix:
+      'Isolated dark effect only, on a pure solid white background (#FFFFFF). Rich dark tones with soft wispy edges and fine detail. Nothing else in the frame: no floor, no shadow, no paper texture, no vignette, no frame. Effect centered with empty white margin around it, nothing touching the edges.'
+  },
+  {
     key: 'wallpaper',
     label: 'Wallpaper 4K',
     hint: 'Detail tinggi, komposisi penuh, cocok untuk latar.',
@@ -57,3 +71,66 @@ export function fileBase(prompt: string, n: number): string {
   }
   return `${base || 'gambar'}-${n}`
 }
+
+/** Contoh prompt VFX siap pakai (dipakai dengan template "VFX latar hitam"). */
+export const VFX_PROMPTS: { group: string; prompts: string[] }[] = [
+  {
+    group: 'Api & ledakan',
+    prompts: [
+      'Realistic orange fire burst exploding outward with flying embers and sparks',
+      'Tall burning flame column with swirling tongues of fire and glowing embers',
+      'Blue gas flame ring burning in a perfect circle',
+      'Fireball explosion with expanding shockwave and hot sparks',
+      'Trail of fire sweeping in a curved arc with burning particles'
+    ]
+  },
+  {
+    group: 'Listrik & energi',
+    prompts: [
+      'Branching blue lightning bolt strike with bright electric glow',
+      'Red lightning cracks spreading in all directions from the center',
+      'Electric plasma ball with cyan energy tendrils',
+      'Purple energy shockwave ring with glowing particles',
+      'Glowing magic portal ring of swirling golden energy'
+    ]
+  },
+  {
+    group: 'Partikel & kilau',
+    prompts: [
+      'Golden glitter dust explosion with sparkling particles',
+      'Magic fairy dust trail with twinkling stars swirling in a spiral',
+      'Burst of colorful confetti-like light particles',
+      'Floating glowing bokeh orbs in warm gold tones',
+      'Shimmering silver star sparkles scattered in a diagonal stream'
+    ]
+  },
+  {
+    group: 'Cahaya',
+    prompts: [
+      'Anamorphic blue lens flare with horizontal light streak',
+      'Warm golden sun flare with soft rainbow ghosting rings',
+      'Neon light streaks in pink and cyan curving in motion',
+      'Aurora borealis ribbon of green and violet light waves',
+      'Bright light rays bursting from the center in every direction'
+    ]
+  },
+  {
+    group: 'Kosmik & alam',
+    prompts: [
+      'Swirling galaxy nebula cloud with bright stars in purple and blue',
+      'Meteor shower with glowing fiery trails',
+      'Glowing fireflies scattered in a soft cluster',
+      'Exploding firework burst in red and gold with falling sparks',
+      'Snowflakes and ice crystals sparkling with cold blue light'
+    ]
+  }
+]
+
+/** Contoh untuk template "Asap/tinta latar putih". */
+export const DARK_FX_PROMPTS = [
+  'Thick black smoke plume rising and curling upward',
+  'Black ink splash with drops and splatters',
+  'Dark dust explosion with scattered particles',
+  'Shattered glass cracks spreading from an impact point',
+  'Wispy grey fog cloud drifting softly'
+]

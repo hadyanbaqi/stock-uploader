@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { PickedFile, QueueTask, Settings } from '../../shared/types'
 import AccountsPage from './pages/AccountsPage'
+import AlphaPage from './pages/AlphaPage'
 import GeneratePage from './pages/GeneratePage'
 import HistoryPage from './pages/HistoryPage'
 import MetadataPage from './pages/MetadataPage'
@@ -8,11 +9,12 @@ import QueuePage from './pages/QueuePage'
 import SettingsPage from './pages/SettingsPage'
 import UploadPage from './pages/UploadPage'
 
-type PageKey = 'upload' | 'generate' | 'metadata' | 'queue' | 'history' | 'accounts' | 'settings'
+type PageKey = 'upload' | 'generate' | 'alpha' | 'metadata' | 'queue' | 'history' | 'accounts' | 'settings'
 
 const PAGES: { key: PageKey; label: string; icon: string }[] = [
   { key: 'upload', label: 'Upload', icon: '⇪' },
   { key: 'generate', label: 'Buat Gambar', icon: '✦' },
+  { key: 'alpha', label: 'Transparan', icon: '◐' },
   { key: 'metadata', label: 'Metadata', icon: '✎' },
   { key: 'queue', label: 'Antrean', icon: '☰' },
   { key: 'history', label: 'Riwayat', icon: '⟲' },
@@ -31,6 +33,7 @@ export default function App() {
   const [tasks, setTasks] = useState<QueueTask[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
   const [notice, setNotice] = useState('')
+  const [alphaIncoming, setAlphaIncoming] = useState<string[]>([])
 
   // Pesan dari proses utama, mis. "12 file dipindah ke folder _sudah-upload".
   useEffect(() => {
@@ -82,6 +85,16 @@ export default function App() {
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
   }, [settings])
+
+  // File baru ke halaman Metadata (dari Buat Gambar atau Transparan).
+  const toMetadata = (paths: string[]) =>
+    void window.api.expandPaths(paths).then((r) => {
+      setFiles((cur) => {
+        const known = new Set(cur.map((f) => f.path))
+        return [...cur, ...r.files.filter((f) => !known.has(f.path))]
+      })
+      setPage('metadata')
+    })
 
   const running = tasks.filter((t) => t.status === 'uploading' || t.status === 'queued' || t.status === 'retrying').length
   const failed = tasks.filter((t) => t.status === 'failed').length
@@ -136,14 +149,14 @@ export default function App() {
             settings={settings}
             onSettings={setSettings}
             onGoSettings={() => setPage('settings')}
-            onToMetadata={(paths) =>
-              void window.api.expandPaths(paths).then((r) => {
-                const known = new Set(files.map((f) => f.path))
-                setFiles([...files, ...r.files.filter((f) => !known.has(f.path))])
-                setPage('metadata')
-              })
-            }
+            onToMetadata={toMetadata}
+            onToAlpha={(paths) => {
+              setAlphaIncoming(paths)
+              setPage('alpha')
+            }}
           />
+        ) : page === 'alpha' ? (
+          <AlphaPage incoming={alphaIncoming} onConsumed={() => setAlphaIncoming([])} onToMetadata={toMetadata} />
         ) : page === 'metadata' ? (
           <MetadataPage files={files} onGoUpload={() => setPage('upload')} onGoSettings={() => setPage('settings')} />
         ) : page === 'queue' ? (

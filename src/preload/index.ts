@@ -81,6 +81,19 @@ const api: Api = {
     ipcRenderer.on('gen:changed', listener)
     return () => ipcRenderer.removeListener('gen:changed', listener)
   },
+  alphaPickFiles: () => ipcRenderer.invoke('alpha:pickFiles'),
+  alphaPickFolder: () => ipcRenderer.invoke('alpha:pickFolder'),
+  alphaExpand: (paths) => ipcRenderer.invoke('alpha:expand', paths),
+  alphaInspect: (paths) => ipcRenderer.invoke('alpha:inspect', paths),
+  alphaPreview: (path, opts) => ipcRenderer.invoke('alpha:preview', path, opts),
+  alphaRun: (paths, opts) => ipcRenderer.invoke('alpha:run', paths, opts),
+  alphaCancel: () => ipcRenderer.invoke('alpha:cancel'),
+  alphaPickOut: () => ipcRenderer.invoke('alpha:pickOut'),
+  onAlphaProgress: (cb) => {
+    const listener = (_e: unknown, p: Parameters<typeof cb>[0]) => cb(p)
+    ipcRenderer.on('alpha:progress', listener)
+    return () => ipcRenderer.removeListener('alpha:progress', listener)
+  },
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s)
 }

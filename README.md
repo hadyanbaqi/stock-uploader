@@ -46,6 +46,16 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
 
+**Versi 1.4.0: Transparan (VFX → PNG transparan)**
+
+- Halaman **Transparan**: seret atau pilih gambar/folder (atau "Jadikan transparan" dari Buat Gambar).
+- Latar hitam/putih/warna dideteksi otomatis; transparansi dihitung per piksel (un-premultiply) sehingga glow, api,
+  dan asap tetap halus tanpa halo. Atur pembersih noise dan kekuatan glow, pratinjau sebelum/sesudah dengan penggeser.
+- Keluaran: PNG transparan (sRGB), JPG preview (belah hitam|putih, hitam, putih, petak, warna + teks), PSD berlapis
+  (efek + latar), nama asli atau berurutan, ZIP otomatis. Diperbesar ke ±6 MP kalau di bawah 4 MP.
+- Buat Gambar: template "VFX latar hitam" dan "Asap/tinta latar putih" + 30 contoh prompt VFX siap pakai.
+- Offline, tanpa biaya; tanda AI generatif ikut dari file asal.
+
 **Versi 1.3.0: Buat Gambar (Ciora)**
 
 - Halaman **Buat Gambar**: tempel banyak prompt (satu per baris), variasi 1–4 per prompt, template gaya (wallpaper 4K,
@@ -102,6 +112,7 @@ npm run test:upload  # tes antrean: putus, jeda, coba ulang (BIG=1 tambah file 5
 npm run test:meta    # tes metadata: aturan SEO, CSV, AI tiruan, ExifTool
 npm run test:csv     # tes impor CSV, folder agensi, metadata-master, pindah file
 npm run test:gen     # tes Buat Gambar: Ciora tiruan, nama file, ZIP
+npm run test:alpha   # tes Transparan: alpha, PNG, PSD
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

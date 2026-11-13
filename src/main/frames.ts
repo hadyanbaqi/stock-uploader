@@ -59,6 +59,35 @@ window.stockJpeg = async (url, minPx, targetPx, q) => {
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h)
   return { data: c.toDataURL('image/jpeg', q), width: w, height: h, srcWidth: w0, srcHeight: h0 }
 }
+// JPG preview dari PNG transparan: latar hitam/putih/petak/belah/warna + teks opsional.
+window.previewJpeg = async (url, style, color, text, q) => {
+  const img = new Image(); img.src = url
+  await img.decode()
+  const w = img.naturalWidth, h = img.naturalHeight
+  const c = document.createElement('canvas'); c.width = w; c.height = h
+  const g = c.getContext('2d')
+  if (style === 'checker') {
+    const cell = Math.max(8, Math.round(Math.max(w, h) / 64))
+    for (let y = 0; y < h; y += cell) for (let x = 0; x < w; x += cell) {
+      g.fillStyle = ((x / cell + y / cell) | 0) % 2 ? '#cccccc' : '#ffffff'; g.fillRect(x, y, cell, cell)
+    }
+  } else if (style === 'split') {
+    g.fillStyle = '#000000'; g.fillRect(0, 0, w / 2, h); g.fillStyle = '#ffffff'; g.fillRect(w / 2, 0, w - w / 2, h)
+  } else {
+    g.fillStyle = style === 'white' ? '#ffffff' : style === 'color' ? color : '#000000'; g.fillRect(0, 0, w, h)
+  }
+  g.drawImage(img, 0, 0)
+  if (text) {
+    const size = Math.round(h * 0.06)
+    g.font = '800 ' + size + 'px "Helvetica Neue", Arial, sans-serif'
+    g.textAlign = 'center'; g.textBaseline = 'bottom'
+    const y = h - Math.round(h * 0.05)
+    const draw = (x, fill) => { g.fillStyle = fill; g.fillText(text, x, y) }
+    if (style === 'split') { g.save(); g.beginPath(); g.rect(0, 0, w / 2, h); g.clip(); draw(w / 2, '#ffffff'); g.restore(); g.save(); g.beginPath(); g.rect(w / 2, 0, w, h); g.clip(); draw(w / 2, '#000000'); g.restore() }
+    else { g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = size / 6; draw(w / 2, style === 'white' || style === 'checker' ? '#111111' : '#ffffff') }
+  }
+  return c.toDataURL('image/jpeg', q)
+}
 window.grabVideo = async (url, count, cell, cols) => {
   const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = url
   await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('codec')) })
@@ -239,4 +268,12 @@ export async function saveStockJpeg(src: string, dest: string): Promise<{ width:
   )
   await fs.writeFile(dest, Buffer.from(r.data.split(',')[1], 'base64'))
   return { width: r.width, height: r.height, upscaled: r.width !== r.srcWidth }
+}
+
+/** JPG preview dari PNG transparan (lihat previewJpeg di jendela pembantu). */
+export async function previewJpegFile(png: string, dest: string, style: string, color: string, text: string): Promise<void> {
+  const url = await run<string>(
+    `previewJpeg(${JSON.stringify(pathToFileURL(png).href)}, ${JSON.stringify(style)}, ${JSON.stringify(color)}, ${JSON.stringify(text)}, 0.92)`
+  )
+  await fs.writeFile(dest, Buffer.from(url.split(',')[1], 'base64'))
 }

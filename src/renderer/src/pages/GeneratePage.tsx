@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GenAction, GenBatch, GenJob, Settings } from '../../../shared/types'
-import { GEN_TEMPLATES } from '../../../shared/genTemplates'
+import { DARK_FX_PROMPTS, GEN_TEMPLATES, VFX_PROMPTS } from '../../../shared/genTemplates'
 
 type Props = {
   settings: Settings | null
   onSettings: (s: Settings) => void
   onToMetadata: (paths: string[]) => void
+  onToAlpha: (paths: string[]) => void
   onGoSettings: () => void
 }
 
@@ -26,7 +27,7 @@ function cleanError(err: unknown): string {
   return String((err as Error)?.message ?? err).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 }
 
-export default function GeneratePage({ settings, onSettings, onToMetadata, onGoSettings }: Props) {
+export default function GeneratePage({ settings, onSettings, onToMetadata, onToAlpha, onGoSettings }: Props) {
   const [tab, setTab] = useState<'make' | 'history'>('make')
   const [text, setText] = useState(() => {
     try {
@@ -50,6 +51,14 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onGoS
   const [note, setNote] = useState('')
   const [big, setBig] = useState<{ job: GenJob; url: string | null } | null>(null)
   const [shownBatches, setShownBatches] = useState(5)
+  const [showIdeas, setShowIdeas] = useState(false)
+
+  function addPrompts(list: string[], tpl: string) {
+    const have = new Set(text.split(/\r?\n/).map((l) => l.trim()))
+    const fresh = list.filter((p) => !have.has(p))
+    setText([text.trim(), ...fresh].filter(Boolean).join('\n'))
+    setTemplate(tpl)
+  }
 
   const prompts = useMemo(
     () =>
@@ -223,12 +232,35 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onGoS
               <strong>1. Prompt</strong>
               <span className="muted small">Satu prompt per baris · {prompts.length} prompt</span>
               <span className="spacer" />
+              <button className="btn small" onClick={() => setShowIdeas(!showIdeas)}>
+                {showIdeas ? 'Tutup contoh VFX' : '✦ Contoh prompt VFX'}
+              </button>
               {text && (
                 <button className="btn ghost small" onClick={() => setText('')}>
                   Kosongkan
                 </button>
               )}
             </div>
+            {showIdeas && (
+              <div className="gen-ideas">
+                <div className="muted small">
+                  Klik kelompok untuk menambahkan promptnya. Template otomatis jadi "VFX latar hitam" — hasilnya nanti dikirim ke halaman Transparan.
+                </div>
+                <div className="chips">
+                  {VFX_PROMPTS.map((g) => (
+                    <button key={g.group} className="chip-btn" onClick={() => addPrompts(g.prompts, 'vfx-black')} title={g.prompts.join('\n')}>
+                      + {g.group} ({g.prompts.length})
+                    </button>
+                  ))}
+                  <button className="chip-btn" onClick={() => addPrompts(VFX_PROMPTS.flatMap((g) => g.prompts), 'vfx-black')}>
+                    + Semua ({VFX_PROMPTS.reduce((n, g) => n + g.prompts.length, 0)})
+                  </button>
+                  <button className="chip-btn" onClick={() => addPrompts(DARK_FX_PROMPTS, 'vfx-white')} title={DARK_FX_PROMPTS.join('\n')}>
+                    + Asap/tinta gelap ({DARK_FX_PROMPTS.length})
+                  </button>
+                </div>
+              </div>
+            )}
             <textarea
               className="gen-prompts"
               rows={6}
@@ -348,7 +380,17 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onGoS
           </div>
 
           {visibleBatches.map((b) => (
-            <BatchView key={b.id} batch={b} jobs={byBatch.get(b.id) ?? []} thumbs={thumbs} act={act} zip={zip} open={open} onToMetadata={onToMetadata} />
+            <BatchView
+              key={b.id}
+              batch={b}
+              jobs={byBatch.get(b.id) ?? []}
+              thumbs={thumbs}
+              act={act}
+              zip={zip}
+              open={open}
+              onToMetadata={onToMetadata}
+              onToAlpha={onToAlpha}
+            />
           ))}
           {batches.length > shownBatches && (
             <button className="btn ghost" onClick={() => setShownBatches((n) => n + 5)}>
@@ -387,7 +429,8 @@ function BatchView({
   act,
   zip,
   open,
-  onToMetadata
+  onToMetadata,
+  onToAlpha
 }: {
   batch: GenBatch
   jobs: GenJob[]
@@ -396,7 +439,9 @@ function BatchView({
   zip: (id: string) => Promise<void>
   open: (j: GenJob) => Promise<void>
   onToMetadata: (paths: string[]) => void
+  onToAlpha: (paths: string[]) => void
 }) {
+  const isFx = jobs.some((j) => j.template.startsWith('vfx'))
   const n = (s: GenJob['status'][]) => jobs.filter((j) => s.includes(j.status))
   const pending = n(['queued', 'running'])
   const ready = n(['ready'])
@@ -436,7 +481,14 @@ function BatchView({
             <button className="btn small" onClick={() => void zip(batch.id)} title={batch.zipPath ?? 'Buat ZIP dari semua gambar tersimpan'}>
               {batch.zipPath ? 'ZIP ulang' : 'Simpan jadi ZIP'}
             </button>
-            <button className="btn small primary" onClick={() => onToMetadata(saved.map((j) => j.savedPath!).filter(Boolean))}>
+            <button
+              className={`btn small ${isFx ? 'primary' : ''}`}
+              onClick={() => onToAlpha(saved.map((j) => j.savedPath!).filter(Boolean))}
+              title="Kirim ke halaman Transparan: PNG transparan + JPG preview + PSD"
+            >
+              Jadikan transparan ({saved.length})
+            </button>
+            <button className={`btn small ${isFx ? '' : 'primary'}`} onClick={() => onToMetadata(saved.map((j) => j.savedPath!).filter(Boolean))}>
               Buat metadata ({saved.length})
             </button>
           </>

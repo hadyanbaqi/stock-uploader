@@ -13,9 +13,10 @@ import { testApiKey } from './ai'
 import { AfterUpload } from './afterupload'
 import { defaultGenDir, GenQueue } from './genqueue'
 import { listImageModels } from './imagegen'
+import { cancelRun, expandImages, inspect as alphaInspect, preview as alphaPreview, runAlpha } from './alphajob'
 import { imageThumb } from './frames'
 import type { FileMeta } from '../shared/metadata'
-import type { AccountGroup, AccountInput, GenAction, GenStartInput, QueueAction, QueueTask, Settings } from '../shared/types'
+import type { AccountGroup, AccountInput, AlphaOptions, GenAction, GenStartInput, QueueAction, QueueTask, Settings } from '../shared/types'
 
 let queue: UploadQueue | null = null
 let history: History | null = null
@@ -334,6 +335,32 @@ function registerIpc(): void {
     return r.filePaths[0]
   })
   ipcMain.handle('gen:defaultDir', () => defaultGenDir())
+
+  const imgFilter = [{ name: 'Gambar', extensions: ['jpg', 'jpeg', 'png'] }]
+  ipcMain.handle('alpha:pickFiles', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showOpenDialog(win, { title: 'Pilih gambar efek', properties: ['openFile', 'multiSelections'], filters: imgFilter })
+    return r.canceled ? [] : expandImages(r.filePaths)
+  })
+  ipcMain.handle('alpha:pickFolder', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showOpenDialog(win, { title: 'Pilih folder render', properties: ['openDirectory', 'multiSelections'] })
+    return r.canceled ? [] : expandImages(r.filePaths)
+  })
+  ipcMain.handle('alpha:expand', (_e, paths: string[]) => expandImages(paths.map(String)))
+  ipcMain.handle('alpha:inspect', (_e, paths: string[]) => alphaInspect(paths.map(String)))
+  ipcMain.handle('alpha:preview', (_e, p: string, o: AlphaOptions) => alphaPreview(String(p), o))
+  ipcMain.handle('alpha:run', async (_e, paths: string[], o: AlphaOptions) => {
+    const r = await runAlpha(paths.map(String), o)
+    if (r.files) shell.showItemInFolder(r.zipPath ?? r.pngs[0])
+    return r
+  })
+  ipcMain.handle('alpha:cancel', () => cancelRun())
+  ipcMain.handle('alpha:pickOut', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showOpenDialog(win, { title: 'Folder hasil', properties: ['openDirectory', 'createDirectory'] })
+    return r.canceled || !r.filePaths[0] ? null : r.filePaths[0]
+  })
 
   ipcMain.handle('ai:hasKey', async () => Boolean(await getAiKey()))
   ipcMain.handle('ai:setKey', (_e, key: string) => setAiKey(String(key ?? '')))

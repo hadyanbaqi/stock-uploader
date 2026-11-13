@@ -165,6 +165,34 @@ export type GenStartInput = {
   autoZip: boolean
 }
 
+/** Transparan: efek di latar polos → PNG transparan (+ JPG preview, PSD). */
+export type AlphaBg = 'auto' | 'black' | 'white' | 'color'
+export type AlphaPreviewStyle = 'black' | 'white' | 'checker' | 'split' | 'color'
+export type AlphaOptions = {
+  bg: AlphaBg
+  /** Warna latar untuk bg = 'color' (#rrggbb). */
+  color: string
+  /** Pembersih noise 0..0.3. */
+  floor: number
+  /** Kekuatan glow 0.5..2. */
+  glow: number
+  /** Perbesar ke ±6 MP kalau di bawah 4 MP. */
+  minMp: boolean
+  jpg: boolean
+  jpgStyle: AlphaPreviewStyle
+  jpgColor: string
+  jpgText: string
+  psd: boolean
+  naming: 'original' | 'sequence'
+  prefix: string
+  /** '' = folder "transparan-<waktu>" di sebelah file pertama. */
+  outDir: string
+  zip: boolean
+}
+export type AlphaInfo = { path: string; name: string; width: number; height: number; bg: 'black' | 'white' | 'color'; color: string; thumb: string }
+export type AlphaProgress = { done: number; total: number; current: string; errors: number }
+export type AlphaResult = { outDir: string; pngs: string[]; files: number; zipPath?: string; errors: { path: string; error: string }[]; canceled: boolean }
+
 export type GenAction = 'keep' | 'discard' | 'retry' | 'again' | 'cancel'
 
 export type QueueAction = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove'
@@ -241,6 +269,16 @@ export type Api = {
   genPickDir(): Promise<string | null>
   genDefaultDir(): Promise<string>
   onGenChanged(cb: () => void): () => void
+
+  alphaPickFiles(): Promise<string[]>
+  alphaPickFolder(): Promise<string[]>
+  alphaExpand(paths: string[]): Promise<string[]>
+  alphaInspect(paths: string[]): Promise<AlphaInfo[]>
+  alphaPreview(path: string, opts: AlphaOptions): Promise<{ before: string; after: string; bg: string; color: string }>
+  alphaRun(paths: string[], opts: AlphaOptions): Promise<AlphaResult>
+  alphaCancel(): Promise<void>
+  alphaPickOut(): Promise<string | null>
+  onAlphaProgress(cb: (p: AlphaProgress) => void): () => void
 
   getSettings(): Promise<Settings>
   saveSettings(s: Partial<Settings>): Promise<Settings>

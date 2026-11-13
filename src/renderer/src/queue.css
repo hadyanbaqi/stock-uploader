@@ -893,3 +893,181 @@ html[data-dark] .gen-badge {
   background: rgba(6, 30, 22, 0.85);
   border: 1px solid rgba(52, 211, 153, 0.35);
 }
+.gen-ideas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+/* Transparan */
+.alpha-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.alpha-item {
+  position: relative;
+  flex: 0 0 auto;
+}
+.alpha-thumb {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 64px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+}
+.alpha-item.on .alpha-thumb {
+  border-color: var(--accent);
+}
+.alpha-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.alpha-bg {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+.alpha-x {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.alpha-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1050px) {
+  .alpha-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.alpha-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.alpha-settings input[type='range'] {
+  width: 100%;
+}
+.alpha-out {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.alpha-sub {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: 22px;
+}
+.alpha-sub .text-input {
+  flex: 1;
+  min-width: 0;
+}
+.grow-ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.small-seg button {
+  padding: 3px 9px;
+  font-size: 12px;
+}
+.checker {
+  background-color: #fff;
+  background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+.ba {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  user-select: none;
+}
+.ba-after img,
+.ba-before img {
+  display: block;
+  width: 100%;
+}
+.ba-before {
+  position: absolute;
+  inset: 0;
+}
+.ba-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.ba-tag {
+  position: absolute;
+  top: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  pointer-events: none;
+}
+.ba-tag.l {
+  left: 10px;
+}
+.ba-tag.r {
+  right: 10px;
+  background: #c8f031;
+  color: #0c0d0e;
+}
+.ba-range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: ew-resize;
+  margin: 0;
+}
+html[data-dark] .alpha-x {
+  background: #12141b;
+}
+html[data-dark] .alpha-item.on .alpha-thumb {
+  border-color: #8f8bff;
+  box-shadow: 0 0 16px rgba(124, 92, 255, 0.35);
+}
