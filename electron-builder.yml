@@ -13,6 +13,7 @@ files:
 npmRebuild: false
 asar: true
 # ExifTool harus berada di luar arsip supaya bisa dijalankan.
+compression: maximum
 asarUnpack:
   - '**/node_modules/exiftool-vendored.exe/**'
   - '**/node_modules/exiftool-vendored.pl/**'
@@ -27,9 +28,15 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
 mac:
+  # Hanya Apple Silicon (M1/M2/M3/M4): installer universal 2x lebih besar.
   target:
     - target: dmg
-      arch: [universal]
+      arch: [arm64]
+  files:
+    - '!node_modules/exiftool-vendored.exe/**'
   category: public.app-category.productivity
   identity: null
   artifactName: Stock-Uploader-${version}-mac.${ext}
+dmg:
+  # ULFO (lzfse) lebih kecil daripada UDZO bawaan; butuh macOS 10.11+.
+  format: ULFO
