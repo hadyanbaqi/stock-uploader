@@ -48,6 +48,7 @@ jobs:
         run: npm run test:csv
 
       - name: Tes aplikasi asli (upload, riwayat, metadata)
+        timeout-minutes: 10
         run: npm run test:app
         continue-on-error: true
 
@@ -55,6 +56,8 @@ jobs:
         run: npm run ${{ matrix.dist }}
 
       - name: Tes aplikasi hasil installer
+        # Mac bertanda tangan ad-hoc bisa menunggu izin Keychain yang tidak bisa diklik di CI.
+        timeout-minutes: 5
         run: node scripts/test-app.mts
         env:
           APP: ${{ github.workspace }}/${{ matrix.app }}
