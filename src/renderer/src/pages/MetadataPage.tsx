@@ -48,7 +48,19 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
   }, [])
 
   useEffect(() => {
-    void window.api.metaList(paths).then((list) => setRecords(new Map(list.map((r) => [r.path, r]))))
+    let stop = false
+    void (async () => {
+      const list = await window.api.metaList(paths)
+      if (stop) return
+      setRecords(new Map(list.map((r) => [r.path, r])))
+      // Metadata yang sudah ada di CSV (master atau CSV platform) langsung dipakai, gratis.
+      if (!list.some((r) => r.status === 'none' || r.status === 'error')) return
+      const r = await window.api.metaImportCsv(paths, false, false).catch(() => null)
+      if (!stop && r?.filled) setNote(`${r.filled} file diisi dari CSV (${r.sources.join(', ')}), tanpa AI.`)
+    })()
+    return () => {
+      stop = true
+    }
   }, [paths])
 
   useEffect(() => {
@@ -112,6 +124,18 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
         setNote(`${r.files.length} file CSV disimpan (${r.rows} baris). Upload di halaman Submit tiap agensi.`)
         if (r.files[0]) void window.api.showInFolder(r.files[0])
       }
+    })
+
+  const importCsv = (pick: boolean) =>
+    run(async () => {
+      const r = await window.api.metaImportCsv(paths, pick, pick)
+      if (!r) return
+      const parts = [
+        r.filled ? `${r.filled} file diisi dari CSV${r.sources.length ? ` (${r.sources.join(', ')})` : ''}.` : 'Tidak ada file yang cocok di CSV.',
+        r.notFound && `${r.notFound} file tidak ada di CSV.`,
+        r.skipped && `${r.skipped} file sudah punya metadata, tidak ditimpa.`
+      ]
+      setNote(parts.filter(Boolean).join(' '))
     })
 
   async function changeMode(m: AiMode) {
@@ -191,6 +215,18 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
         {todo.length > 0 && !generating && (
           <div className="muted small">Perkiraan biaya: {cost ? `± Rp ${cost.toLocaleString('id-ID')}` : 'gratis'} untuk {todo.length} file.</div>
         )}
+        <div className="meta-bar-row">
+          <span className="small">Dari CSV:</span>
+          <span className="muted small grow">
+            Pakai judul dan keyword yang sudah ada di metadata-master.csv atau CSV platform (dicocokkan lewat nama file). Gratis, tanpa AI.
+          </span>
+          <button className="btn" disabled={generating > 0} onClick={() => void importCsv(false)} title="Cari CSV di folder file, folder di atasnya, dan _FILE-KERJA/metadata-master.csv">
+            Ambil dari CSV
+          </button>
+          <button className="btn" disabled={generating > 0} onClick={() => void importCsv(true)} title="Pilih file CSV sendiri; isian yang ada ditimpa">
+            Pilih CSV…
+          </button>
+        </div>
         <div className="meta-bar-row csv-row">
           <span className="small">CSV untuk:</span>
           {AGENCY_CSV.map((a) => (
@@ -263,7 +299,7 @@ function MetaCard({ r, onRegenerate, canGenerate }: { r: MetaRecord; onRegenerat
         {(r.tech || r.model) && (
           <div className="muted small">
             {r.tech}
-            {r.model && ` · AI: ${r.model}`}
+            {r.model && ` · ${r.model.startsWith('CSV') ? r.model : `AI: ${r.model}`}`}
           </div>
         )}
         {r.error && <div className="small danger-text">{r.error}</div>}

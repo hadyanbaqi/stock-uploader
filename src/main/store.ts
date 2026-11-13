@@ -29,7 +29,7 @@ function jsonStore<T>(name: string, fallback: () => T) {
 }
 
 const groupsStore = jsonStore<{ groups: AccountGroup[] }>('groups.json', () => ({ groups: [] }))
-const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'system' }))
+const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'system', markMaster: true, afterDone: 'keep' }))
 const secretStore = jsonStore<{ aiKeyEnc?: string }>('secrets.json', () => ({}))
 
 /** API key AI, disimpan terenkripsi lewat brankas sistem seperti password FTP. */
@@ -83,6 +83,8 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
   if (patch.perAccount !== undefined) next.perAccount = Math.max(1, Math.min(5, Math.round(Number(patch.perAccount) || 2)))
   if (patch.aiMode && ['hemat', 'gratis', 'detail'].includes(patch.aiMode)) next.aiMode = patch.aiMode
   if (patch.theme && ['system', 'light', 'dark'].includes(patch.theme)) next.theme = patch.theme
+  if (patch.markMaster !== undefined) next.markMaster = Boolean(patch.markMaster)
+  if (patch.afterDone && ['keep', 'move', 'trash'].includes(patch.afterDone)) next.afterDone = patch.afterDone
   await settingsStore.write(next)
   return next
 }

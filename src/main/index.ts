@@ -6,15 +6,17 @@ import { expandPaths, FILE_KINDS } from './files'
 import { History, historyCsv } from './history'
 import { UploadQueue } from './queue'
 import { deleteGroup, getAiKey, getSettings, listGroups, saveGroup, saveSettings, setAiKey } from './store'
-import { cancelGenerate, exportCsv, flushMeta, generate, inject, listMeta, updateMeta } from './metadata'
+import { cancelGenerate, exportCsv, flushMeta, generate, importFromCsv, inject, listMeta, updateMeta } from './metadata'
 import { closeHelper } from './frames'
 import { closeExifTool } from './inject'
 import { testApiKey } from './ai'
+import { AfterUpload } from './afterupload'
 import type { FileMeta } from '../shared/metadata'
 import type { AccountGroup, AccountInput, QueueAction, QueueTask, Settings } from '../shared/types'
 
 let queue: UploadQueue | null = null
 let history: History | null = null
+let after: AfterUpload | null = null
 let blocker: number | null = null
 let quitting = false
 
@@ -58,6 +60,7 @@ async function startQueue(): Promise<UploadQueue> {
     onChange: broadcast,
     wasSent: (id, name, size) => history?.wasSent(id, name, size) ?? false,
     onFinished: (t, agency) => {
+      after?.finished(t, agency)
       void history
         ?.add({
           fileName: t.fileName,
@@ -94,6 +97,14 @@ async function startQueue(): Promise<UploadQueue> {
           allowInvalidCert: acc.allowInvalidCert
         }
       }
+    }
+  })
+  after = new AfterUpload({
+    settings: getSettings,
+    tasks: () => q.list(),
+    trash: (p) => shell.trashItem(p),
+    notify: (text) => {
+      for (const w of BrowserWindow.getAllWindows()) w.webContents.send('app:notice', text)
     }
   })
   await q.init()
@@ -255,6 +266,20 @@ function registerIpc(): void {
     if (r.canceled || !r.filePaths[0]) return null
     return exportCsv(paths.map(String), agencies.map(String), r.filePaths[0])
   })
+  ipcMain.handle('meta:importCsv', async (e, paths: string[], pick: boolean, overwrite: boolean) => {
+    let csvFiles: string[] | undefined
+    if (pick) {
+      const win = BrowserWindow.fromWebContents(e.sender)!
+      const r = await dialog.showOpenDialog(win, {
+        title: 'Pilih CSV metadata (mis. metadata-master.csv atau adobe-stock.csv)',
+        properties: ['openFile', 'multiSelections'],
+        filters: [{ name: 'CSV', extensions: ['csv'] }]
+      })
+      if (r.canceled || !r.filePaths.length) return null
+      csvFiles = r.filePaths
+    }
+    return importFromCsv(paths.map(String), csvFiles, Boolean(overwrite))
+  })
   ipcMain.handle('app:showInFolder', (_e, p: string) => shell.showItemInFolder(String(p)))
 
   ipcMain.handle('ai:hasKey', async () => Boolean(await getAiKey()))
@@ -354,7 +379,7 @@ if (!gotLock) {
     queue = null
     e.preventDefault()
     closeHelper()
-    void Promise.allSettled([q.shutdown(), flushMeta(), closeExifTool()]).finally(() => app.quit())
+    void Promise.allSettled([q.shutdown().then(() => after?.flush()), flushMeta(), closeExifTool()]).finally(() => app.quit())
   })
 
   app.on('window-all-closed', () => {

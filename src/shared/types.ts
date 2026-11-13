@@ -119,6 +119,10 @@ export type Settings = {
   perAccount: number
   aiMode: AiMode
   theme: 'system' | 'light' | 'dark'
+  /** Setelah berhasil: ubah "belum" jadi "sudah" di metadata-master.csv. */
+  markMaster: boolean
+  /** Setelah semua upload satu file berhasil: biarkan, pindah ke _sudah-upload, atau ke Tempat Sampah. */
+  afterDone: 'keep' | 'move' | 'trash'
 }
 
 export type QueueAction = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove'
@@ -165,12 +169,20 @@ export type Api = {
   metaInject(paths: string[]): Promise<{ saved: number; csvOnly: number; failed: number }>
   /** Pilih folder lalu simpan CSV untuk tiap agensi. null kalau dibatalkan. */
   metaExportCsv(paths: string[], agencies: string[]): Promise<{ files: string[]; rows: number } | null>
+  /**
+   * Isi metadata dari CSV yang sudah ada. pick=false: cari otomatis (CSV di folder file dan di atasnya,
+   * termasuk _FILE-KERJA/metadata-master.csv); pick=true: pilih file CSV. null kalau dibatalkan.
+   */
+  metaImportCsv(paths: string[], pick: boolean, overwrite: boolean): Promise<{ filled: number; notFound: number; skipped: number; sources: string[] } | null>
   onMetaRecord(cb: (r: MetaRecord) => void): () => void
   showInFolder(path: string): Promise<void>
 
   hasAiKey(): Promise<boolean>
   setAiKey(key: string): Promise<void>
   testAiKey(key?: string): Promise<{ ok: boolean; message: string }>
+
+  /** Pesan singkat dari proses utama (mis. hasil merapikan setelah upload). */
+  onNotice(cb: (text: string) => void): () => void
 
   getSettings(): Promise<Settings>
   saveSettings(s: Partial<Settings>): Promise<Settings>

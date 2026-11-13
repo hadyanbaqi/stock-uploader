@@ -44,6 +44,9 @@ jobs:
       - name: Tes metadata (aturan SEO, CSV, AI tiruan, ExifTool)
         run: npm run test:meta
 
+      - name: Tes alur kerja (impor CSV, folder agensi, metadata-master, pindah file)
+        run: npm run test:csv
+
       - name: Tes aplikasi asli (upload, riwayat, metadata)
         run: npm run test:app
         continue-on-error: true

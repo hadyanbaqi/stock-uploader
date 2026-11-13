@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import type { Account, AccountGroup, AddResult, PickedFile, PickResult } from '../../../shared/types'
 import { AGENCY_PRESETS, presetByKey } from '../../../shared/presets'
 import { formatBytes } from '../format'
+import { agencyFromPath } from '../../../shared/agencyFolder'
 
 type Props = {
   files: PickedFile[]
@@ -12,6 +13,7 @@ type Props = {
 }
 
 const SELECTED_KEY = 'su.selectedAccounts'
+const BYFOLDER_KEY = 'su.byFolder'
 
 function loadSelected(): Set<string> {
   try {
@@ -32,6 +34,13 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
   const [groupName, setGroupName] = useState<string | null>(null)
   const [sent, setSent] = useState<Map<string, string[]>>(new Map())
   const [force, setForce] = useState(false)
+  const [byFolder, setByFolder] = useState(() => {
+    try {
+      return localStorage.getItem(BYFOLDER_KEY) !== '0'
+    } catch {
+      return true
+    }
+  })
 
   useEffect(() => {
     void window.api.listAccounts().then(setAccounts)
@@ -81,8 +90,52 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
   }, [files, chosenKey])
 
   const nameOf = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a.name])), [accounts])
-  const sentPairs = [...sent.values()].reduce((s, ids) => s + ids.length, 0)
-  const totalUploads = files.length * chosen.length - (force ? 0 : sentPairs)
+
+  // Mode "sesuai nama folder": file di folder ADOBE-STOCK hanya ke akun Adobe Stock, dst.
+  const fileAgency = useMemo(() => new Map(files.map((f) => [f.path, agencyFromPath(f.path)])), [files])
+  const detected = useMemo(() => {
+    const m = new Map<string, { folders: Set<string>; count: number }>()
+    for (const fa of fileAgency.values()) {
+      if (!fa) continue
+      const e = m.get(fa.agency) ?? { folders: new Set<string>(), count: 0 }
+      e.folders.add(fa.folderName)
+      e.count++
+      m.set(fa.agency, e)
+    }
+    return m
+  }, [fileAgency])
+  const folderMode = byFolder && detected.size > 0
+  const agencyOf = useMemo(() => new Map(active.map((a) => [a.id, a.agency])), [active])
+  const targetsFor = (p: string): string[] => {
+    if (!folderMode) return chosen
+    const a = fileAgency.get(p)?.agency
+    return a ? chosen.filter((id) => agencyOf.get(id) === a) : []
+  }
+  let totalPairs = 0
+  let sentPairs = 0
+  let unrouted = 0
+  for (const f of files) {
+    const t = targetsFor(f.path)
+    if (!t.length) unrouted++
+    totalPairs += t.length
+    sentPairs += (sent.get(f.path) ?? []).filter((id) => t.includes(id)).length
+  }
+  const totalUploads = totalPairs - (force ? 0 : sentPairs)
+
+  function chooseByFolder() {
+    const next = new Set(selected)
+    for (const a of active) if (detected.has(a.agency)) next.add(a.id)
+    setSelected(next)
+  }
+
+  function setMode(v: boolean) {
+    setByFolder(v)
+    try {
+      localStorage.setItem(BYFOLDER_KEY, v ? '1' : '0')
+    } catch {
+      // abaikan
+    }
+  }
 
   function merge(r: PickResult) {
     const known = new Set(files.map((f) => f.path))
@@ -142,11 +195,25 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
     setBusy(true)
     setError('')
     try {
-      const r: AddResult = await window.api.queueAdd(
-        files.map((f) => f.path),
-        chosen,
-        force
-      )
+      // Kelompokkan file yang tujuannya sama, lalu masukkan ke antrean per kelompok.
+      const groupsByTarget = new Map<string, { paths: string[]; ids: string[] }>()
+      for (const f of files) {
+        const ids = targetsFor(f.path)
+        if (!ids.length) continue
+        const k = ids.join(',')
+        const g = groupsByTarget.get(k) ?? { paths: [], ids }
+        g.paths.push(f.path)
+        groupsByTarget.set(k, g)
+      }
+      const r: AddResult = { added: 0, duplicates: 0, sameName: 0, missing: 0, alreadySent: 0 }
+      for (const g of groupsByTarget.values()) {
+        const x = await window.api.queueAdd(g.paths, g.ids, force)
+        r.added += x.added
+        r.duplicates += x.duplicates
+        r.sameName += x.sameName
+        r.missing += x.missing
+        r.alreadySent += x.alreadySent
+      }
       const skipped = [
         r.alreadySent && `${r.alreadySent} sudah pernah dikirim ke akun itu`,
         r.duplicates && `${r.duplicates} sudah ada di antrean`,
@@ -257,6 +324,52 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
         </section>
       )}
 
+      {detected.size > 0 && (
+        <section className="panel">
+          <div className="panel-head">
+            <strong>Tujuan</strong>
+            <span className="spacer" />
+            <div className="seg">
+              <button className={byFolder ? 'on' : ''} onClick={() => setMode(true)} title="File di folder ADOBE-STOCK hanya ke akun Adobe Stock, dan seterusnya">
+                Sesuai nama folder
+              </button>
+              <button className={!byFolder ? 'on' : ''} onClick={() => setMode(false)} title="Semua file ke semua akun yang dicentang">
+                Semua akun yang dicentang
+              </button>
+            </div>
+          </div>
+          {folderMode && (
+            <>
+              <div className="route-list">
+                {[...detected.entries()].map(([agency, d]) => {
+                  const ids = chosen.filter((id) => agencyOf.get(id) === agency)
+                  return (
+                    <div key={agency} className={`route ${ids.length ? '' : 'warn'}`}>
+                      <span className="folder">{[...d.folders].join(', ')}</span>
+                      <span className="muted">{d.count} file →</span>
+                      {ids.length ? (
+                        <span>{ids.map((id) => nameOf.get(id)).join(', ')}</span>
+                      ) : (
+                        <span>
+                          belum ada akun {presetByKey(agency).name} yang dicentang
+                          {!active.some((a) => a.agency === agency) && ' (tambahkan dulu di halaman Akun)'}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="field-row" style={{ marginTop: 10 }}>
+                <button className="btn small" onClick={chooseByFolder}>
+                  Centang akun sesuai folder
+                </button>
+                {unrouted > 0 && <span className="muted small">{unrouted} file tidak terkirim: folder agensinya tidak dikenali atau akunnya belum dicentang.</span>}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
       <section className="panel">
         <div className="panel-head">
           <strong>Akun tujuan</strong>
@@ -334,7 +447,8 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
 
       <footer className="upload-bar">
         <span>
-          {files.length} file × {chosen.length} akun = <strong>{Math.max(0, totalUploads)} upload</strong>
+          {folderMode ? `${files.length} file sesuai folder` : `${files.length} file × ${chosen.length} akun`} ={' '}
+          <strong>{Math.max(0, totalUploads)} upload</strong>
           {sentPairs > 0 && !force && <span className="muted small"> · {sentPairs} dilewati karena sudah pernah dikirim</span>}
         </span>
         <span className="spacer" />

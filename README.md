@@ -46,6 +46,17 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
 
+**Versi 1.1.0: Sambung ke alur kerja Microstok**
+
+- **Metadata dari CSV (gratis, tanpa AI):** halaman Metadata otomatis mengisi judul, deskripsi, keyword, dan kategori dari
+  `metadata-master.csv` (di `_FILE-KERJA`) dan CSV platform (`adobe-stock.csv`, `shutterstock.csv`, `vecteezy.csv`, dll.)
+  yang ada di folder file atau folder di atasnya, dicocokkan lewat nama file. Tombol "Pilih CSV…" untuk CSV lain.
+- **Upload sesuai nama folder:** file di folder `ADOBE-STOCK` hanya ke akun Adobe Stock, `SHUTTERSTOCK` ke Shutterstock,
+  `VECTEEZY` ke Vecteezy, dan seterusnya (juga `file video/ADOBE-STOCK`). Bisa dimatikan untuk kirim ke semua akun yang dicentang.
+- **Setelah upload berhasil** (Pengaturan): status "belum" → "sudah" di `metadata-master.csv` untuk agensi itu, dan file yang
+  semua uploadnya selesai bisa dipindah ke `_sudah-upload` (di sebelah folder agensi) atau ke Tempat Sampah.
+- **Installer lebih kecil:** Mac hanya Apple Silicon, DMG ULFO, kompresi maksimum, bahasa Electron hanya Inggris + Indonesia.
+
 ## Cara pakai singkat
 
 1. **Akun**: tambah akun agensi, klik Tes koneksi, Simpan.
@@ -75,6 +86,7 @@ npm run typecheck    # cek tipe
 npm run test:conn    # tes koneksi ke server FTP/FTPS/SFTP lokal
 npm run test:upload  # tes antrean: putus, jeda, coba ulang (BIG=1 tambah file 500 MB)
 npm run test:meta    # tes metadata: aturan SEO, CSV, AI tiruan, ExifTool
+npm run test:csv     # tes impor CSV, folder agensi, metadata-master, pindah file
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

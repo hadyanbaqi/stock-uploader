@@ -575,3 +575,41 @@ h1 {
 .spacer {
   flex: 1;
 }
+
+/* Pesan singkat dari proses utama (mis. hasil merapikan setelah upload). */
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+  max-width: 420px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Upload sesuai nama folder */
+.route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.route .folder {
+  font-weight: 600;
+}
+.route.warn {
+  color: var(--fail-text);
+}

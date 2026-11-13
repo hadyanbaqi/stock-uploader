@@ -136,6 +136,46 @@ export default function SettingsPage({ settings, onChange }: Props) {
       </section>
 
       <section className="panel settings">
+        <h2>Setelah upload berhasil</h2>
+        <div className="setting-row">
+          <span className="setting-label">metadata-master.csv</span>
+          <div className="grow">
+            <label className="check">
+              <input type="checkbox" checked={settings.markMaster} onChange={(e) => void save({ markMaster: e.target.checked })} />
+              Ubah status "belum" jadi "sudah" di kolom agensi tujuan
+            </label>
+            <div className="muted small" style={{ marginTop: 6 }}>
+              File dicari di folder _FILE-KERJA pada folder file atau folder di atasnya. Kolom berisi "-" tidak diubah.
+            </div>
+          </div>
+        </div>
+        <div className="setting-row">
+          <span className="setting-label">File yang sudah terkirim</span>
+          <div className="grow">
+            <div className="seg">
+              {(
+                [
+                  ['keep', 'Biarkan'],
+                  ['move', 'Pindah ke _sudah-upload'],
+                  ['trash', 'Pindah ke Tempat Sampah']
+                ] as const
+              ).map(([k, label]) => (
+                <button key={k} className={settings.afterDone === k ? 'on' : ''} onClick={() => void save({ afterDone: k })}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="muted small" style={{ marginTop: 6 }}>
+              Dijalankan setelah semua upload file itu berhasil (kalau ada yang gagal, file dibiarkan).{' '}
+              {settings.afterDone === 'move' &&
+                'Contoh: Microstok/ADOBE-STOCK/14/a.jpg → Microstok/_sudah-upload/ADOBE-STOCK/14/a.jpg. Hapus folder itu sendiri kalau perlu ruang.'}
+              {settings.afterDone === 'trash' && 'Ruang disk baru lega setelah Tempat Sampah dikosongkan.'}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel settings">
         <h2>Tampilan</h2>
         <div className="setting-row">
           <span className="setting-label">Tema</span>

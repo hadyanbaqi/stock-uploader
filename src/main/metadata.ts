@@ -5,6 +5,7 @@ import path from 'node:path'
 import { AGENCY_CSV, canInject, EMPTY_META, type FileMeta, type MetaRecord } from '../shared/metadata'
 import { generateMeta } from './ai'
 import { buildCsv } from './csv'
+import { lookupCsv } from './csvimport'
 import { makePreview } from './frames'
 import { injectMeta } from './inject'
 import { getAiKey, getSettings } from './store'
@@ -258,4 +259,52 @@ export async function exportCsv(paths: string[], agencies: string[], folder: str
     files.push(f)
   }
   return { files, rows: items.length }
+}
+
+/**
+ * Isi metadata dari CSV yang sudah ada (tanpa AI). `csvFiles` kosong = cari CSV otomatis di sekitar file.
+ * File yang sudah punya metadata tidak ditimpa, kecuali `overwrite`.
+ */
+export async function importFromCsv(
+  paths: string[],
+  csvFiles: string[] | undefined,
+  overwrite: boolean
+): Promise<{ filled: number; notFound: number; skipped: number; sources: string[] }> {
+  const all = await load()
+  const want: string[] = []
+  let skipped = 0
+  for (const p of paths) {
+    const r = all[p]
+    if (busy.has(p)) continue
+    if (!overwrite && r?.title && (r.status === 'ready' || r.status === 'saved')) {
+      skipped++
+      continue
+    }
+    want.push(p)
+  }
+  const found = await lookupCsv(want, csvFiles)
+  const sources = new Set<string>()
+  let filled = 0
+  for (const p of want) {
+    const m = found.get(p)
+    if (!m) continue
+    const st = await fs.stat(p).catch(() => null)
+    const r = all[p] ?? fresh(p, st?.size ?? 0)
+    const meta = m.meta
+    all[p] = {
+      ...r,
+      ...meta,
+      description: meta.description || r.description || meta.title || r.title,
+      size: st?.size ?? r.size,
+      status: 'ready',
+      model: `CSV: ${m.sources.join(' + ')}`,
+      generatedAt: Date.now(),
+      error: undefined
+    }
+    m.sources.forEach((s) => sources.add(s))
+    filled++
+    await emit(p)
+  }
+  if (filled) scheduleSave()
+  return { filled, notFound: want.length - filled, skipped, sources: [...sources] }
 }

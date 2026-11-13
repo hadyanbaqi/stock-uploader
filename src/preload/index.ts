@@ -48,6 +48,7 @@ const api: Api = {
   metaCancel: () => ipcRenderer.invoke('meta:cancel'),
   metaInject: (paths) => ipcRenderer.invoke('meta:inject', paths),
   metaExportCsv: (paths, agencies) => ipcRenderer.invoke('meta:exportCsv', paths, agencies),
+  metaImportCsv: (paths, pick, overwrite) => ipcRenderer.invoke('meta:importCsv', paths, pick, overwrite),
   onMetaRecord: (cb) => {
     const listener = (_e: unknown, r: MetaRecord) => cb(r)
     ipcRenderer.on('meta:record', listener)
@@ -59,6 +60,11 @@ const api: Api = {
   setAiKey: (key) => ipcRenderer.invoke('ai:setKey', key),
   testAiKey: (key) => ipcRenderer.invoke('ai:testKey', key),
 
+  onNotice: (cb) => {
+    const listener = (_e: unknown, text: string) => cb(text)
+    ipcRenderer.on('app:notice', listener)
+    return () => ipcRenderer.removeListener('app:notice', listener)
+  },
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s)
 }

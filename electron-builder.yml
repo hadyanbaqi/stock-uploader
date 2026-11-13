@@ -12,8 +12,11 @@ files:
   - '!node_modules/ssh2/lib/protocol/crypto/build/**'
 npmRebuild: false
 asar: true
-# ExifTool harus berada di luar arsip supaya bisa dijalankan.
+# Supaya installer kecil: kompresi maksimum dan hanya bahasa Inggris + Indonesia
+# dari bahasa bawaan Electron (sisanya ±40 MB tidak terpakai).
 compression: maximum
+electronLanguages: [en, en-US, id]
+# ExifTool harus berada di luar arsip supaya bisa dijalankan.
 asarUnpack:
   - '**/node_modules/exiftool-vendored.exe/**'
   - '**/node_modules/exiftool-vendored.pl/**'
@@ -22,9 +25,14 @@ win:
     - target: nsis
       arch: [x64]
   artifactName: Stock-Uploader-Setup-${version}.${ext}
+  # ExifTool versi Perl hanya untuk Mac/Linux.
+  files:
+    - '!node_modules/exiftool-vendored.pl/**'
   # Tanpa sertifikat resmi: lewati alat tanda tangan (butuh hak admin di Windows).
   signAndEditExecutable: false
 nsis:
+  # Tanpa file .blockmap (hanya dipakai pembaruan otomatis, yang tidak ada di aplikasi ini).
+  differentialPackage: false
   oneClick: false
   allowToChangeInstallationDirectory: true
 mac:

@@ -28,6 +28,21 @@ export default function App() {
   const [files, setFiles] = useState<PickedFile[]>([])
   const [tasks, setTasks] = useState<QueueTask[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [notice, setNotice] = useState('')
+
+  // Pesan dari proses utama, mis. "12 file dipindah ke folder _sudah-upload".
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const off = window.api.onNotice((text) => {
+      setNotice(text)
+      clearTimeout(timer)
+      timer = setTimeout(() => setNotice(''), 8000)
+    })
+    return () => {
+      off()
+      clearTimeout(timer)
+    }
+  }, [])
 
   useEffect(() => {
     const onHash = () => setPage(pageFromHash())
@@ -92,6 +107,11 @@ export default function App() {
       </aside>
 
       <main className="content">
+        {notice && (
+          <div className="toast" role="status" onClick={() => setNotice('')}>
+            {notice}
+          </div>
+        )}
         {page === 'upload' ? (
           <UploadPage
             files={files}
