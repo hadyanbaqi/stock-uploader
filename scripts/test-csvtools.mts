@@ -78,10 +78,10 @@ check('nama file tidak dihitung sebagai folder', agencyFromPath('/a/b/vecteezy.j
 check('"adobe-research" bukan folder agensi', agencyFromPath('/home/adobe-research/x.jpg') === null)
 check(
   'tujuan _sudah-upload di sebelah folder agensi',
-  doneTarget('/U/Microstok/ADOBE-STOCK/14/a.jpg') === '/U/Microstok/_sudah-upload/ADOBE-STOCK/14/a.jpg',
+  doneTarget(path.join('/U', 'Microstok', 'ADOBE-STOCK', '14', 'a.jpg')) === path.join('/U', 'Microstok', '_sudah-upload', 'ADOBE-STOCK', '14', 'a.jpg'),
   doneTarget('/U/Microstok/ADOBE-STOCK/14/a.jpg')
 )
-check('tanpa folder agensi: _sudah-upload di folder file', doneTarget('/U/x/a.jpg') === '/U/x/_sudah-upload/a.jpg')
+check('tanpa folder agensi: _sudah-upload di folder file', doneTarget(path.join('/U', 'x', 'a.jpg')) === path.join('/U', 'x', '_sudah-upload', 'a.jpg'))
 
 // ---------- 4. Tandai master ----------
 console.log('[4] metadata-master.csv')
