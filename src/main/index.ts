@@ -120,7 +120,7 @@ function createWindow(): BrowserWindow {
     title: 'Stock Uploader',
     // Ikon jendela saat dijalankan dari kode (installer memakai ikon dari build/icon.png).
     icon: app.isPackaged ? undefined : path.join(__dirname, '../../build/icon.png'),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f1115' : '#f5f6f8',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#07080b' : '#f5f6f8',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),

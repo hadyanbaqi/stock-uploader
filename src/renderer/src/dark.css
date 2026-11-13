@@ -1,0 +1,301 @@
+/*
+ * Mode gelap: kanvas hampir hitam, kartu biru-ungu gelap dengan garis tipis dan cahaya lembut,
+ * progress hijau toska bercahaya. Aktif lewat <html data-dark> (diatur App sesuai tema).
+ */
+html[data-dark] {
+  --bg: #07080b;
+  --panel: #10121a;
+  --panel-2: #0b0d13;
+  --sidebar: #090a0e;
+  --text: #e9ebf1;
+  --muted: #8b92a3;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+  --accent: #7b86ff;
+  --accent-text: #ffffff;
+  --glow-teal: #2dd4bf;
+  --glow-indigo: #6d6bff;
+  --glow-violet: #a46bff;
+  --ok-bg: rgba(52, 211, 153, 0.12);
+  --ok-text: #6ee7b7;
+  --fail-bg: rgba(248, 113, 113, 0.12);
+  --fail-text: #fca5a5;
+  --run-bg: rgba(45, 212, 191, 0.12);
+  --run-text: #7ff3e4;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+html[data-dark] body {
+  background:
+    radial-gradient(900px 500px at 15% -10%, rgba(45, 212, 191, 0.07), transparent 60%),
+    radial-gradient(900px 600px at 95% 0%, rgba(124, 92, 255, 0.09), transparent 60%),
+    radial-gradient(800px 600px at 50% 110%, rgba(56, 97, 255, 0.06), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-dark] h1 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: 26px;
+}
+
+/* ---------- Samping ---------- */
+html[data-dark] .sidebar {
+  background: linear-gradient(180deg, rgba(14, 16, 24, 0.9), rgba(8, 9, 13, 0.9));
+  border-right: 1px solid var(--border);
+}
+html[data-dark] .brand-mark {
+  background: linear-gradient(135deg, #2dd4bf, #6d6bff 60%, #a46bff);
+  box-shadow: 0 0 18px rgba(109, 107, 255, 0.45);
+}
+html[data-dark] .nav-item {
+  color: var(--muted);
+  border-radius: 10px;
+  transition: background 0.15s, color 0.15s;
+}
+html[data-dark] .nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+html[data-dark] .nav-item.active {
+  color: var(--text);
+  background: linear-gradient(90deg, rgba(109, 107, 255, 0.2), rgba(109, 107, 255, 0.04));
+  box-shadow: inset 2px 0 0 #8f8bff, 0 0 20px rgba(109, 107, 255, 0.12);
+}
+html[data-dark] .nav-item.active .nav-icon {
+  color: #b9b6ff;
+}
+html[data-dark] .nav-bottom {
+  border-top-color: var(--border);
+}
+
+/* ---------- Kartu ---------- */
+html[data-dark] .panel,
+html[data-dark] .card,
+html[data-dark] .task,
+html[data-dark] .meta-card,
+html[data-dark] .modal,
+html[data-dark] .empty,
+html[data-dark] .table-wrap {
+  background: linear-gradient(180deg, rgba(22, 25, 36, 0.92), rgba(12, 14, 20, 0.92));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+html[data-dark] .panel,
+html[data-dark] .card,
+html[data-dark] .meta-card,
+html[data-dark] .empty {
+  border-radius: 18px;
+}
+html[data-dark] .task {
+  border-radius: 14px;
+  transition: border-color 0.15s;
+}
+html[data-dark] .task:hover {
+  border-color: var(--border-strong);
+}
+html[data-dark] .task.st-uploading {
+  border-color: rgba(45, 212, 191, 0.28);
+  background:
+    radial-gradient(420px 120px at 0% 0%, rgba(45, 212, 191, 0.1), transparent 70%),
+    linear-gradient(180deg, rgba(22, 25, 36, 0.92), rgba(12, 14, 20, 0.92));
+}
+html[data-dark] .modal {
+  border-radius: 20px;
+  border-color: var(--border-strong);
+}
+html[data-dark] .modal-backdrop {
+  background: rgba(3, 4, 8, 0.7);
+  backdrop-filter: blur(6px);
+}
+
+/* Kartu progress keseluruhan: cahaya toska di pojok, seperti panel performa. */
+html[data-dark] .panel.overall {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 22px;
+  background:
+    radial-gradient(520px 160px at 0% 0%, rgba(45, 212, 191, 0.16), transparent 70%),
+    radial-gradient(420px 180px at 100% 100%, rgba(109, 107, 255, 0.14), transparent 70%),
+    linear-gradient(180deg, rgba(20, 24, 34, 0.95), rgba(10, 12, 18, 0.95));
+}
+html[data-dark] .overall-top strong {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  background: linear-gradient(90deg, #e9fffb, #7ff3e4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- Progress ---------- */
+html[data-dark] .bar {
+  height: 6px;
+  border: 0;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0 1px, transparent 1px 5px), rgba(255, 255, 255, 0.03);
+  overflow: visible;
+}
+html[data-dark] .bar > div {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #14b8a6, #5eead4 70%, #e6fffb);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.65), 0 0 2px rgba(230, 255, 251, 0.9);
+  transition: width 0.4s ease;
+}
+html[data-dark] .bar.thin {
+  height: 4px;
+}
+html[data-dark] .st-paused .bar > div {
+  background: #5b6170;
+  box-shadow: none;
+}
+
+/* ---------- Tombol & isian ---------- */
+html[data-dark] .btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+html[data-dark] .btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+html[data-dark] .btn.primary {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, #5b6cff, #8b5cf6);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 8px 24px rgba(99, 102, 241, 0.35);
+}
+html[data-dark] .btn.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6b7bff, #9b6dff);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset, 0 10px 30px rgba(99, 102, 241, 0.5);
+}
+html[data-dark] .btn.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+html[data-dark] .btn.ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+html[data-dark] .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-dark] input:not([type='checkbox']):not([type='radio']),
+html[data-dark] select,
+html[data-dark] textarea {
+  background: rgba(5, 6, 10, 0.7);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+html[data-dark] input:focus,
+html[data-dark] select:focus,
+html[data-dark] textarea:focus {
+  outline: none;
+  border-color: rgba(123, 134, 255, 0.7);
+  box-shadow: 0 0 0 3px rgba(123, 134, 255, 0.18);
+}
+html[data-dark] input[type='checkbox'] {
+  accent-color: #7b86ff;
+}
+
+/* ---------- Tab & segmen ---------- */
+html[data-dark] .tabs,
+html[data-dark] .seg {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+html[data-dark] .tab,
+html[data-dark] .seg button {
+  color: var(--muted);
+}
+html[data-dark] .tab.on,
+html[data-dark] .seg button.on {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+/* ---------- Label status ---------- */
+html[data-dark] .pill {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-strong);
+  padding: 2px 10px;
+}
+html[data-dark] .pill-uploading,
+html[data-dark] .pill-retrying {
+  background: rgba(45, 212, 191, 0.12);
+  color: #7ff3e4;
+  border-color: rgba(45, 212, 191, 0.3);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.15);
+}
+html[data-dark] .pill-done {
+  border-color: rgba(52, 211, 153, 0.25);
+}
+html[data-dark] .pill-failed {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* ---------- Area upload ---------- */
+html[data-dark] .dropzone {
+  border: 1px dashed rgba(164, 107, 255, 0.45);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1.4px) 0 0 / 14px 14px,
+    radial-gradient(500px 200px at 50% 0%, rgba(109, 107, 255, 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(20, 20, 36, 0.9), rgba(10, 11, 18, 0.9));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 0 40px rgba(109, 107, 255, 0.08);
+}
+html[data-dark] .dropzone.over {
+  border-color: #b9a6ff;
+  box-shadow: 0 0 0 1px rgba(185, 166, 255, 0.4) inset, 0 0 50px rgba(124, 92, 255, 0.3);
+}
+html[data-dark] .drop-note {
+  color: #b9b6ff;
+}
+html[data-dark] .pick {
+  border-radius: 10px;
+}
+html[data-dark] .pick.on,
+html[data-dark] .chip.on {
+  background: rgba(109, 107, 255, 0.14);
+  border-color: rgba(143, 139, 255, 0.5);
+}
+html[data-dark] .upload-bar {
+  background: rgba(9, 10, 15, 0.85);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Lain-lain ---------- */
+html[data-dark] .banner.info {
+  background: rgba(109, 107, 255, 0.12);
+  color: #c9c7ff;
+  border: 1px solid rgba(109, 107, 255, 0.25);
+}
+html[data-dark] .banner.danger {
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+html[data-dark] .toast {
+  background: linear-gradient(180deg, rgba(22, 30, 34, 0.96), rgba(12, 18, 20, 0.96));
+  color: #9ff5e9;
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  box-shadow: 0 0 24px rgba(45, 212, 191, 0.2), 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+html[data-dark] .table th {
+  color: var(--muted);
+}
+html[data-dark] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html[data-dark] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}

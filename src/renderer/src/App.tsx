@@ -68,8 +68,17 @@ export default function App() {
   // Tema: ikuti sistem, atau paksa terang/gelap.
   useEffect(() => {
     const root = document.documentElement
-    if (!settings || settings.theme === 'system') delete root.dataset.theme
-    else root.dataset.theme = settings.theme
+    const theme = settings?.theme ?? 'dark'
+    if (theme === 'system') delete root.dataset.theme
+    else root.dataset.theme = theme
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const apply = () => {
+      if (theme === 'dark' || (theme === 'system' && mq.matches)) root.dataset.dark = ''
+      else delete root.dataset.dark
+    }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
   }, [settings])
 
   const running = tasks.filter((t) => t.status === 'uploading' || t.status === 'queued' || t.status === 'retrying').length

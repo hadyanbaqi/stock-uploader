@@ -45,6 +45,10 @@ export default function QueuePage({ tasks, onGoUpload }: Props) {
   const pending = tasks.filter((t) => [...RUNNING, 'paused'].includes(t.status))
   const pendSize = pending.reduce((s, t) => s + t.size, 0)
   const pendSent = pending.reduce((s, t) => s + t.sent, 0)
+  // Progress keseluruhan: yang sudah selesai ikut dihitung (sampai dibersihkan), yang gagal/dibatalkan tidak.
+  const batch = tasks.filter((t) => t.status === 'done' || [...RUNNING, 'paused'].includes(t.status))
+  const allSize = batch.reduce((s, t) => s + t.size, 0)
+  const allSent = batch.reduce((s, t) => s + (t.status === 'done' ? t.size : Math.min(t.sent, t.size)), 0)
   const speed = tasks.reduce((s, t) => s + (t.status === 'uploading' ? t.speed : 0), 0)
 
   const shown = useMemo(() => {
@@ -122,14 +126,14 @@ export default function QueuePage({ tasks, onGoUpload }: Props) {
       {pending.length > 0 && (
         <section className="panel overall">
           <div className="overall-top">
-            <strong>{percent(pendSent, pendSize)}%</strong>
+            <strong>{percent(allSent, allSize)}%</strong>
             <span className="muted small">
-              {formatBytes(pendSent)} dari {formatBytes(pendSize)}
+              {nDone} dari {batch.length} file selesai · {formatBytes(allSent)} dari {formatBytes(allSize)}
               {speed > 0 && ` · ${formatSpeed(speed)} · sisa ± ${formatDuration((pendSize - pendSent) / speed)}`}
             </span>
           </div>
           <div className="bar">
-            <div style={{ width: `${percent(pendSent, pendSize)}%` }} />
+            <div style={{ width: `${percent(allSent, allSize)}%` }} />
           </div>
         </section>
       )}

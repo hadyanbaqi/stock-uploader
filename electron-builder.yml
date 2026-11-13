@@ -43,7 +43,8 @@ mac:
   files:
     - '!node_modules/exiftool-vendored.exe/**'
   category: public.app-category.productivity
-  identity: null
+  # Tanda tangan ad-hoc (gratis): tanpa ini Mac chip M menyebut aplikasinya "rusak".
+  identity: '-'
   artifactName: Stock-Uploader-${version}-mac.${ext}
 dmg:
   # ULFO (lzfse) lebih kecil daripada UDZO bawaan; butuh macOS 10.11+.

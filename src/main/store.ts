@@ -29,7 +29,7 @@ function jsonStore<T>(name: string, fallback: () => T) {
 }
 
 const groupsStore = jsonStore<{ groups: AccountGroup[] }>('groups.json', () => ({ groups: [] }))
-const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'system', markMaster: true, afterDone: 'keep' }))
+const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep' }))
 const secretStore = jsonStore<{ aiKeyEnc?: string }>('secrets.json', () => ({}))
 
 /** API key AI, disimpan terenkripsi lewat brankas sistem seperti password FTP. */
