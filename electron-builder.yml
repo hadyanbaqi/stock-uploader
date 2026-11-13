@@ -11,6 +11,7 @@ files:
   - '!node_modules/cpu-features/**'
   - '!node_modules/ssh2/lib/protocol/crypto/build/**'
 npmRebuild: false
+afterPack: build/afterPack.cjs
 asar: true
 # Supaya installer kecil: kompresi maksimum dan hanya bahasa Inggris + Indonesia
 # dari bahasa bawaan Electron (sisanya ±40 MB tidak terpakai).
@@ -43,8 +44,8 @@ mac:
   files:
     - '!node_modules/exiftool-vendored.exe/**'
   category: public.app-category.productivity
-  # Tanda tangan ad-hoc (gratis): tanpa ini Mac chip M menyebut aplikasinya "rusak".
-  identity: '-'
+  # Tanpa sertifikat Apple; tanda tangan ad-hoc dibuat di build/afterPack.cjs.
+  identity: null
   artifactName: Stock-Uploader-${version}-mac.${ext}
 dmg:
   # ULFO (lzfse) lebih kecil daripada UDZO bawaan; butuh macOS 10.11+.
