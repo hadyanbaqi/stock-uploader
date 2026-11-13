@@ -47,6 +47,9 @@ jobs:
       - name: Tes alur kerja (impor CSV, folder agensi, metadata-master, pindah file)
         run: npm run test:csv
 
+      - name: Tes Buat Gambar (Ciora tiruan, nama file, ZIP)
+        run: npm run test:gen
+
       - name: Tes aplikasi asli (upload, riwayat, metadata)
         timeout-minutes: 10
         run: npm run test:app

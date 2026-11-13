@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import type { PickedFile, QueueTask, Settings } from '../../shared/types'
 import AccountsPage from './pages/AccountsPage'
+import GeneratePage from './pages/GeneratePage'
 import HistoryPage from './pages/HistoryPage'
 import MetadataPage from './pages/MetadataPage'
 import QueuePage from './pages/QueuePage'
 import SettingsPage from './pages/SettingsPage'
 import UploadPage from './pages/UploadPage'
 
-type PageKey = 'upload' | 'metadata' | 'queue' | 'history' | 'accounts' | 'settings'
+type PageKey = 'upload' | 'generate' | 'metadata' | 'queue' | 'history' | 'accounts' | 'settings'
 
 const PAGES: { key: PageKey; label: string; icon: string }[] = [
   { key: 'upload', label: 'Upload', icon: '⇪' },
+  { key: 'generate', label: 'Buat Gambar', icon: '✦' },
   { key: 'metadata', label: 'Metadata', icon: '✎' },
   { key: 'queue', label: 'Antrean', icon: '☰' },
   { key: 'history', label: 'Riwayat', icon: '⟲' },
@@ -128,6 +130,19 @@ export default function App() {
             onQueued={() => setPage('queue')}
             onGoAccounts={() => setPage('accounts')}
             onGoMetadata={() => setPage('metadata')}
+          />
+        ) : page === 'generate' ? (
+          <GeneratePage
+            settings={settings}
+            onSettings={setSettings}
+            onGoSettings={() => setPage('settings')}
+            onToMetadata={(paths) =>
+              void window.api.expandPaths(paths).then((r) => {
+                const known = new Set(files.map((f) => f.path))
+                setFiles([...files, ...r.files.filter((f) => !known.has(f.path))])
+                setPage('metadata')
+              })
+            }
           />
         ) : page === 'metadata' ? (
           <MetadataPage files={files} onGoUpload={() => setPage('upload')} onGoSettings={() => setPage('settings')} />

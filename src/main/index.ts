@@ -6,17 +6,21 @@ import { expandPaths, FILE_KINDS } from './files'
 import { History, historyCsv } from './history'
 import { UploadQueue } from './queue'
 import { deleteGroup, getAiKey, getSettings, listGroups, saveGroup, saveSettings, setAiKey } from './store'
-import { cancelGenerate, exportCsv, flushMeta, generate, importFromCsv, inject, listMeta, updateMeta } from './metadata'
+import { aiFlags, cancelGenerate, exportCsv, flushMeta, generate, importFromCsv, inject, listMeta, updateMeta } from './metadata'
 import { closeHelper } from './frames'
 import { closeExifTool } from './inject'
 import { testApiKey } from './ai'
 import { AfterUpload } from './afterupload'
+import { defaultGenDir, GenQueue } from './genqueue'
+import { listImageModels } from './imagegen'
+import { imageThumb } from './frames'
 import type { FileMeta } from '../shared/metadata'
-import type { AccountGroup, AccountInput, QueueAction, QueueTask, Settings } from '../shared/types'
+import type { AccountGroup, AccountInput, GenAction, GenStartInput, QueueAction, QueueTask, Settings } from '../shared/types'
 
 let queue: UploadQueue | null = null
 let history: History | null = null
 let after: AfterUpload | null = null
+let gen: GenQueue | null = null
 let blocker: number | null = null
 let quitting = false
 
@@ -266,6 +270,7 @@ function registerIpc(): void {
     if (r.canceled || !r.filePaths[0]) return null
     return exportCsv(paths.map(String), agencies.map(String), r.filePaths[0])
   })
+  ipcMain.handle('meta:aiFlags', (_e, paths: string[]) => aiFlags(paths.map(String)))
   ipcMain.handle('meta:importCsv', async (e, paths: string[], pick: boolean, overwrite: boolean) => {
     let csvFiles: string[] | undefined
     if (pick) {
@@ -281,6 +286,54 @@ function registerIpc(): void {
     return importFromCsv(paths.map(String), csvFiles, Boolean(overwrite))
   })
   ipcMain.handle('app:showInFolder', (_e, p: string) => shell.showItemInFolder(String(p)))
+
+  ipcMain.handle('gen:models', async () => {
+    const key = await getAiKey()
+    if (!key) throw new Error('Isi API key Ciora dulu di halaman Pengaturan.')
+    return listImageModels(key)
+  })
+  ipcMain.handle('gen:start', (_e, input: GenStartInput) =>
+    gen!.start({
+      prompts: Array.isArray(input?.prompts) ? input.prompts.map(String) : [],
+      variants: Number(input?.variants) || 1,
+      template: String(input?.template ?? 'none'),
+      model: String(input?.model ?? ''),
+      aspect: String(input?.aspect ?? '3:2'),
+      refPath: input?.refPath ? String(input.refPath) : undefined,
+      autoZip: Boolean(input?.autoZip)
+    })
+  )
+  ipcMain.handle('gen:list', () => gen?.list() ?? { jobs: [], batches: [] })
+  ipcMain.handle('gen:thumbs', (_e, ids: string[]) => gen?.thumbs(ids.map(String)) ?? {})
+  ipcMain.handle('gen:action', (_e, action: GenAction, ids: string[]) => {
+    if (!['keep', 'discard', 'retry', 'again', 'cancel'].includes(action)) return
+    return gen?.action(action, ids.map(String))
+  })
+  ipcMain.handle('gen:zip', async (_e, batchId: string) => {
+    const r = await gen!.zip(String(batchId))
+    shell.showItemInFolder(r.zipPath)
+    return r
+  })
+  ipcMain.handle('gen:full', (_e, id: string) => gen?.full(String(id)) ?? null)
+  ipcMain.handle('gen:pickRef', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Pilih gambar referensi',
+      properties: ['openFile'],
+      filters: [{ name: 'Gambar', extensions: ['jpg', 'jpeg', 'png', 'webp'] }]
+    })
+    if (r.canceled || !r.filePaths[0]) return null
+    const t = await imageThumb(r.filePaths[0], 320)
+    return { path: r.filePaths[0], thumb: t.data }
+  })
+  ipcMain.handle('gen:pickDir', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const r = await dialog.showOpenDialog(win, { title: 'Folder simpan gambar', properties: ['openDirectory', 'createDirectory'] })
+    if (r.canceled || !r.filePaths[0]) return null
+    await saveSettings({ genDir: r.filePaths[0] })
+    return r.filePaths[0]
+  })
+  ipcMain.handle('gen:defaultDir', () => defaultGenDir())
 
   ipcMain.handle('ai:hasKey', async () => Boolean(await getAiKey()))
   ipcMain.handle('ai:setKey', (_e, key: string) => setAiKey(String(key ?? '')))
@@ -356,6 +409,10 @@ if (!gotLock) {
     }
     nativeTheme.themeSource = (await getSettings()).theme
     queue = await startQueue()
+    gen = new GenQueue((text) => {
+      for (const w of BrowserWindow.getAllWindows()) w.webContents.send('app:notice', text)
+    })
+    await gen.init()
     registerIpc()
     const win = createWindow()
     if (process.env.SU_E2E) {
@@ -379,7 +436,7 @@ if (!gotLock) {
     queue = null
     e.preventDefault()
     closeHelper()
-    void Promise.allSettled([q.shutdown().then(() => after?.flush()), flushMeta(), closeExifTool()]).finally(() => app.quit())
+    void Promise.allSettled([q.shutdown().then(() => after?.flush()), gen?.shutdown(), flushMeta(), closeExifTool()]).finally(() => app.quit())
   })
 
   app.on('window-all-closed', () => {

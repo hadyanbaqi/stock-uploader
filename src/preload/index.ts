@@ -48,6 +48,7 @@ const api: Api = {
   metaCancel: () => ipcRenderer.invoke('meta:cancel'),
   metaInject: (paths) => ipcRenderer.invoke('meta:inject', paths),
   metaExportCsv: (paths, agencies) => ipcRenderer.invoke('meta:exportCsv', paths, agencies),
+  metaAiFlags: (paths) => ipcRenderer.invoke('meta:aiFlags', paths),
   metaImportCsv: (paths, pick, overwrite) => ipcRenderer.invoke('meta:importCsv', paths, pick, overwrite),
   onMetaRecord: (cb) => {
     const listener = (_e: unknown, r: MetaRecord) => cb(r)
@@ -64,6 +65,21 @@ const api: Api = {
     const listener = (_e: unknown, text: string) => cb(text)
     ipcRenderer.on('app:notice', listener)
     return () => ipcRenderer.removeListener('app:notice', listener)
+  },
+  genModels: () => ipcRenderer.invoke('gen:models'),
+  genStart: (input) => ipcRenderer.invoke('gen:start', input),
+  genList: () => ipcRenderer.invoke('gen:list'),
+  genThumbs: (ids) => ipcRenderer.invoke('gen:thumbs', ids),
+  genAction: (action, ids) => ipcRenderer.invoke('gen:action', action, ids),
+  genZip: (batchId) => ipcRenderer.invoke('gen:zip', batchId),
+  genFull: (id) => ipcRenderer.invoke('gen:full', id),
+  genPickRef: () => ipcRenderer.invoke('gen:pickRef'),
+  genPickDir: () => ipcRenderer.invoke('gen:pickDir'),
+  genDefaultDir: () => ipcRenderer.invoke('gen:defaultDir'),
+  onGenChanged: (cb) => {
+    const listener = () => cb()
+    ipcRenderer.on('gen:changed', listener)
+    return () => ipcRenderer.removeListener('gen:changed', listener)
   },
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s)

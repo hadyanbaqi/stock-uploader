@@ -142,7 +142,7 @@ async function post(body: unknown, input: AiInput): Promise<Response> {
   }
 }
 
-function httpError(status: number, text: string): AiError {
+export function httpError(status: number, text: string): AiError {
   if (status === 401 || status === 403) return new AiError('API key Ciora salah atau tidak aktif. Cek di Pengaturan.', status, false)
   if (status === 402 || /insufficient|balance|saldo|credit/i.test(text)) return new AiError('Saldo Ciora habis. Isi saldo dulu di ciora.id.', status, false)
   if (status === 429) return new AiError('Model sedang penuh (terlalu banyak permintaan).', status, true)

@@ -46,6 +46,20 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
 
+**Versi 1.3.0: Buat Gambar (Ciora)**
+
+- Halaman **Buat Gambar**: tempel banyak prompt (satu per baris), variasi 1–4 per prompt, template gaya (wallpaper 4K,
+  foto realistis, siluet untuk vektor, tekstur, ruang kosong untuk teks), gambar referensi opsional.
+- Model dibaca langsung dari akun Ciora (hanya model gambar, Gemini flash image paling atas), rasio 16:9 sampai 9:16.
+- Antrean 2 gambar sekaligus dengan coba ulang otomatis; yang ditolak filter konten tidak dicoba ulang.
+- Galeri per kelompok: Simpan / Buang / Buat lagi / Salin prompt, lihat ukuran penuh.
+- Simpan = JPG kualitas 95, diperbesar ke ±6 MP kalau di bawah 4 MP, ditandai AI generatif + prompt jadi catatan metadata.
+- **ZIP otomatis**: begitu satu kelompok selesai, semua hasil disimpan lalu di-ZIP (bisa dimatikan; ada tombol ZIP manual).
+- "Buat metadata" langsung dari hasil; file AI tidak dikirim ke Shutterstock, Vecteezy, Alamy, iStock.
+- Tab Riwayat: semua prompt, model, status, dan file.
+
+**Versi 1.2.0:** tema gelap baru (bawaan), progress Antrean menghitung semua file, tanda tangan ad-hoc Mac.
+
 **Versi 1.1.0: Sambung ke alur kerja Microstok**
 
 - **Metadata dari CSV (gratis, tanpa AI):** halaman Metadata otomatis mengisi judul, deskripsi, keyword, dan kategori dari
@@ -87,6 +101,7 @@ npm run test:conn    # tes koneksi ke server FTP/FTPS/SFTP lokal
 npm run test:upload  # tes antrean: putus, jeda, coba ulang (BIG=1 tambah file 500 MB)
 npm run test:meta    # tes metadata: aturan SEO, CSV, AI tiruan, ExifTool
 npm run test:csv     # tes impor CSV, folder agensi, metadata-master, pindah file
+npm run test:gen     # tes Buat Gambar: Ciora tiruan, nama file, ZIP
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

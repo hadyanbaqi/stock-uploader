@@ -1,7 +1,7 @@
 {
   "name": "stock-uploader",
   "productName": "Stock Uploader",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Uploader FTP/FTPS/SFTP pribadi untuk banyak akun microstock",
   "private": true,
   "main": "./out/main/index.js",
@@ -15,6 +15,7 @@
     "test:upload": "node scripts/test-upload.mts",
     "test:meta": "node scripts/test-metadata.mts",
     "test:csv": "node scripts/test-csvtools.mts",
+    "test:gen": "node scripts/test-imagegen.mts",
     "test:app": "electron-vite build && node scripts/test-app.mts",
     "dist:win": "electron-vite build && electron-builder --win --publish never",
     "dist:mac": "electron-vite build && electron-builder --mac --publish never"

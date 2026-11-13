@@ -47,6 +47,18 @@ window.grabImage = async (url, max) => {
   const ts = Math.min(1, 320 / Math.max(w, h))
   return { data: jpeg(c, w, h, 0.85), thumb: jpeg(c, Math.round(w * ts), Math.round(h * ts), 0.75), width: w0, height: h0, ...info }
 }
+// Gambar hasil AI → JPG siap stok: diperbesar kalau di bawah minPx piksel (Adobe minta minimal 4 MP).
+window.stockJpeg = async (url, minPx, targetPx, q) => {
+  const img = new Image(); img.src = url
+  await img.decode()
+  const w0 = img.naturalWidth, h0 = img.naturalHeight
+  const s = w0 * h0 < minPx ? Math.sqrt(targetPx / (w0 * h0)) : 1
+  const w = Math.round(w0 * s), h = Math.round(h0 * s)
+  const c = document.createElement('canvas'); c.width = w; c.height = h
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h)
+  return { data: c.toDataURL('image/jpeg', q), width: w, height: h, srcWidth: w0, srcHeight: h0 }
+}
 window.grabVideo = async (url, count, cell, cols) => {
   const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = url
   await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('codec')) })
@@ -212,4 +224,19 @@ export async function makePreview(filePath: string, mode: AiMode): Promise<Previ
     .filter(Boolean)
     .join(', ')
   return { images: [im.data], thumb: im.thumb, tech }
+}
+
+/** Gambar kecil (data URL JPEG) untuk galeri. */
+export async function imageThumb(filePath: string, max = 640): Promise<{ data: string; width: number; height: number }> {
+  const im = await run<ImageGrab>(`grabImage(${JSON.stringify(pathToFileURL(filePath).href)}, ${max})`)
+  return { data: im.data, width: im.width, height: im.height }
+}
+
+/** Simpan gambar sebagai JPG kualitas 95; diperbesar ke ±6 MP kalau di bawah 4 MP. */
+export async function saveStockJpeg(src: string, dest: string): Promise<{ width: number; height: number; upscaled: boolean }> {
+  const r = await run<{ data: string; width: number; height: number; srcWidth: number; srcHeight: number }>(
+    `stockJpeg(${JSON.stringify(pathToFileURL(src).href)}, 4000000, 6000000, 0.95)`
+  )
+  await fs.writeFile(dest, Buffer.from(r.data.split(',')[1], 'base64'))
+  return { width: r.width, height: r.height, upscaled: r.width !== r.srcWidth }
 }

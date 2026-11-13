@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type DragEvent } from 'react'
 import type { Account, AccountGroup, AddResult, PickedFile, PickResult } from '../../../shared/types'
-import { AGENCY_PRESETS, presetByKey } from '../../../shared/presets'
+import { AGENCY_PRESETS, NO_AI_AGENCIES, presetByKey } from '../../../shared/presets'
 import { formatBytes } from '../format'
 import { agencyFromPath } from '../../../shared/agencyFolder'
 
@@ -34,6 +34,7 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
   const [groupName, setGroupName] = useState<string | null>(null)
   const [sent, setSent] = useState<Map<string, string[]>>(new Map())
   const [force, setForce] = useState(false)
+  const [aiFiles, setAiFiles] = useState<Set<string>>(new Set())
   const [byFolder, setByFolder] = useState(() => {
     try {
       return localStorage.getItem(BYFOLDER_KEY) !== '0'
@@ -106,11 +107,24 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
   }, [fileAgency])
   const folderMode = byFolder && detected.size > 0
   const agencyOf = useMemo(() => new Map(active.map((a) => [a.id, a.agency])), [active])
+  // Gambar AI generatif tidak dikirim ke agensi yang menolaknya (Shutterstock, Vecteezy, Alamy, iStock).
+  useEffect(() => {
+    let stop = false
+    void window.api.metaAiFlags(files.map((f) => f.path)).then((list) => !stop && setAiFiles(new Set(list)))
+    return () => {
+      stop = true
+    }
+  }, [files])
   const targetsFor = (p: string): string[] => {
-    if (!folderMode) return chosen
-    const a = fileAgency.get(p)?.agency
-    return a ? chosen.filter((id) => agencyOf.get(id) === a) : []
+    let ids = chosen
+    if (folderMode) {
+      const a = fileAgency.get(p)?.agency
+      ids = a ? chosen.filter((id) => agencyOf.get(id) === a) : []
+    }
+    if (aiFiles.has(p)) ids = ids.filter((id) => !NO_AI_AGENCIES.includes(agencyOf.get(id) ?? ''))
+    return ids
   }
+  const aiBlocked = files.filter((f) => aiFiles.has(f.path)).length > 0 && chosen.some((id) => NO_AI_AGENCIES.includes(agencyOf.get(id) ?? ''))
   let totalPairs = 0
   let sentPairs = 0
   let unrouted = 0
@@ -368,6 +382,13 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
             </>
           )}
         </section>
+      )}
+
+      {aiBlocked && (
+        <div className="banner info">
+          {aiFiles.size} file ditandai buatan AI generatif. File itu tidak dikirim ke Shutterstock, Vecteezy, Alamy, dan iStock karena
+          mereka menolak konten AI; ke Adobe tetap jalan (tandai AI saat submit).
+        </div>
       )}
 
       <section className="panel">

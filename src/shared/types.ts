@@ -123,7 +123,49 @@ export type Settings = {
   markMaster: boolean
   /** Setelah semua upload satu file berhasil: biarkan, pindah ke _sudah-upload, atau ke Tempat Sampah. */
   afterDone: 'keep' | 'move' | 'trash'
+  /** Buat Gambar: folder simpan ('' = Pictures/Stock Uploader), model, rasio, ZIP otomatis. */
+  genDir: string
+  genModel: string
+  genAspect: string
+  genAutoZip: boolean
 }
+
+export type GenStatus = 'queued' | 'running' | 'ready' | 'saved' | 'discarded' | 'failed' | 'rejected' | 'canceled'
+
+/** Satu gambar yang diminta ke AI. */
+export type GenJob = {
+  id: string
+  batchId: string
+  /** Prompt seperti yang ditulis pengguna. */
+  prompt: string
+  /** Prompt yang dikirim (dengan template gaya). */
+  fullPrompt: string
+  template: string
+  model: string
+  aspect: string
+  status: GenStatus
+  attempt: number
+  error?: string
+  createdAt: number
+  finishedAt?: number
+  width?: number
+  height?: number
+  savedPath?: string
+}
+
+export type GenBatch = { id: string; folder: string; autoZip: boolean; zipPath?: string; createdAt: number; refName?: string }
+
+export type GenStartInput = {
+  prompts: string[]
+  variants: number
+  template: string
+  model: string
+  aspect: string
+  refPath?: string
+  autoZip: boolean
+}
+
+export type GenAction = 'keep' | 'discard' | 'retry' | 'again' | 'cancel'
 
 export type QueueAction = 'pause' | 'resume' | 'cancel' | 'retry' | 'remove'
 
@@ -173,6 +215,8 @@ export type Api = {
    * Isi metadata dari CSV yang sudah ada. pick=false: cari otomatis (CSV di folder file dan di atasnya,
    * termasuk _FILE-KERJA/metadata-master.csv); pick=true: pilih file CSV. null kalau dibatalkan.
    */
+  /** Path yang ditandai dibuat dengan AI generatif. */
+  metaAiFlags(paths: string[]): Promise<string[]>
   metaImportCsv(paths: string[], pick: boolean, overwrite: boolean): Promise<{ filled: number; notFound: number; skipped: number; sources: string[] } | null>
   onMetaRecord(cb: (r: MetaRecord) => void): () => void
   showInFolder(path: string): Promise<void>
@@ -183,6 +227,20 @@ export type Api = {
 
   /** Pesan singkat dari proses utama (mis. hasil merapikan setelah upload). */
   onNotice(cb: (text: string) => void): () => void
+
+  genModels(): Promise<string[]>
+  genStart(input: GenStartInput): Promise<{ queued: number; batchId: string }>
+  genList(): Promise<{ jobs: GenJob[]; batches: GenBatch[] }>
+  /** Gambar kecil (data URL) untuk id yang diminta. */
+  genThumbs(ids: string[]): Promise<Record<string, string>>
+  genAction(action: GenAction, ids: string[]): Promise<void>
+  /** Simpan semua gambar tersimpan di satu kelompok jadi ZIP. */
+  genZip(batchId: string): Promise<{ zipPath: string; count: number }>
+  genFull(id: string): Promise<string | null>
+  genPickRef(): Promise<{ path: string; thumb: string } | null>
+  genPickDir(): Promise<string | null>
+  genDefaultDir(): Promise<string>
+  onGenChanged(cb: () => void): () => void
 
   getSettings(): Promise<Settings>
   saveSettings(s: Partial<Settings>): Promise<Settings>

@@ -308,3 +308,9 @@ export async function importFromCsv(
   if (filled) scheduleSave()
   return { filled, notFound: want.length - filled, skipped, sources: [...sources] }
 }
+
+/** File yang ditandai "Dibuat dengan AI generatif". */
+export async function aiFlags(paths: string[]): Promise<string[]> {
+  const all = await load()
+  return paths.filter((p) => all[p]?.aiGenerated)
+}

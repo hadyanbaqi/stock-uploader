@@ -29,7 +29,7 @@ function jsonStore<T>(name: string, fallback: () => T) {
 }
 
 const groupsStore = jsonStore<{ groups: AccountGroup[] }>('groups.json', () => ({ groups: [] }))
-const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep' }))
+const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep', genDir: '', genModel: '', genAspect: '3:2', genAutoZip: true }))
 const secretStore = jsonStore<{ aiKeyEnc?: string }>('secrets.json', () => ({}))
 
 /** API key AI, disimpan terenkripsi lewat brankas sistem seperti password FTP. */
@@ -85,6 +85,10 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
   if (patch.theme && ['system', 'light', 'dark'].includes(patch.theme)) next.theme = patch.theme
   if (patch.markMaster !== undefined) next.markMaster = Boolean(patch.markMaster)
   if (patch.afterDone && ['keep', 'move', 'trash'].includes(patch.afterDone)) next.afterDone = patch.afterDone
+  if (typeof patch.genDir === 'string') next.genDir = patch.genDir
+  if (typeof patch.genModel === 'string') next.genModel = patch.genModel.slice(0, 200)
+  if (patch.genAspect && ['16:9', '3:2', '4:3', '1:1', '9:16', '2:3'].includes(patch.genAspect)) next.genAspect = patch.genAspect
+  if (patch.genAutoZip !== undefined) next.genAutoZip = Boolean(patch.genAutoZip)
   await settingsStore.write(next)
   return next
 }

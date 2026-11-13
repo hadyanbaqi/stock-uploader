@@ -98,6 +98,9 @@ export const AGENCY_PRESETS: AgencyPreset[] = [
   }
 ]
 
+/** Agensi yang tidak menerima gambar buatan AI generatif. */
+export const NO_AI_AGENCIES = ['shutterstock', 'vecteezy', 'alamy', 'istock']
+
 export const DEFAULT_PORT: Record<Protocol, number> = { ftp: 21, ftps: 21, sftp: 22 }
 
 export const PROTOCOL_LABEL: Record<Protocol, string> = {
