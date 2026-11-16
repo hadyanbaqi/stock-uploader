@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { ALPHA_AGENCIES, ALPHA_AGENCY_ORDER } from '../../../shared/alphaAgency'
 import type { AlphaInfo, AlphaOptions, AlphaProgress, AlphaResult } from '../../../shared/types'
 
 type Props = {
@@ -308,6 +309,43 @@ export default function AlphaPage({ incoming, onConsumed, onToMetadata }: Props)
                 <label className="check small">
                   <input type="checkbox" checked={o.psd} onChange={(e) => set('psd', e.target.checked)} /> PSD berlapis (efek + latar)
                 </label>
+                <div className="mfield alpha-agencies">
+                  <span>Paket per agensi</span>
+                  <span className="muted small">Tiap agensi dapat folder sendiri berisi jenis file yang diterimanya.</span>
+                  <div className="alpha-agency-grid">
+                    {ALPHA_AGENCY_ORDER.map((a) => {
+                      const r = ALPHA_AGENCIES[a]
+                      const on = (o.agencies ?? []).includes(a)
+                      return (
+                        <label key={a} className={`check small alpha-agency${on ? ' on' : ''}`} title={r.note}>
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={(e) => set('agencies', e.target.checked ? [...(o.agencies ?? []), a] : (o.agencies ?? []).filter((x) => x !== a))}
+                          />
+                          <span>
+                            {r.label} <em>{r.files.map((f) => f.toUpperCase()).join(' + ')}</em>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {(o.agencies ?? []).length > 0 && (
+                    <>
+                      <ul className="alpha-agency-notes small">
+                        {ALPHA_AGENCY_ORDER.filter((a) => o.agencies?.includes(a)).map((a) => (
+                          <li key={a}>
+                            <strong>{ALPHA_AGENCIES[a].folder}/</strong> {ALPHA_AGENCIES[a].note}
+                          </li>
+                        ))}
+                      </ul>
+                      <label className="check small">
+                        <input type="checkbox" checked={Boolean(o.aiSource)} onChange={(e) => set('aiSource', e.target.checked)} />
+                        Gambar ini buatan AI (dilewati untuk agensi yang menolak AI)
+                      </label>
+                    </>
+                  )}
+                </div>
                 <div className="mfield">
                   <span>Nama file</span>
                   <div className="field-row">
@@ -385,16 +423,27 @@ export default function AlphaPage({ incoming, onConsumed, onToMetadata }: Props)
                     Buka folder
                   </button>
                 )}
-                {result.pngs.length > 0 && (
-                  <button className="btn small primary" onClick={() => onToMetadata(result.pngs)}>
-                    Buat metadata ({result.pngs.length} PNG)
+                {result.agencyFiles && result.agencyFiles.length > 0 ? (
+                  <button className="btn small primary" onClick={() => onToMetadata(result.agencyFiles!)} title="PNG/JPG/PSD utama di folder tiap agensi">
+                    Buat metadata ({result.agencyFiles.length} file agensi)
                   </button>
+                ) : (
+                  result.pngs.length > 0 && (
+                    <button className="btn small primary" onClick={() => onToMetadata(result.pngs)}>
+                      Buat metadata ({result.pngs.length} PNG)
+                    </button>
+                  )
                 )}
               </div>
               <div className="muted small">
                 {result.outDir}
                 {result.zipPath && ` · ZIP: ${result.zipPath}`}
               </div>
+              {result.notes?.map((n) => (
+                <div key={n} className="small warn-text">
+                  ⚠️ {n}
+                </div>
+              ))}
               {result.errors.map((e) => (
                 <div key={e.path} className="small danger-text">
                   {e.path.split(/[\\/]/).pop()}: {e.error}

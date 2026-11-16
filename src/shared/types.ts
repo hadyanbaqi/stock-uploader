@@ -1,3 +1,4 @@
+import type { AlphaAgency } from './alphaAgency'
 import type { AiMode, FileMeta, MetaRecord } from './metadata'
 import type { UpdateState } from './update'
 import type { UpscaleOptions } from './upscale'
@@ -216,10 +217,25 @@ export type AlphaOptions = {
   /** '' = folder "transparan-<waktu>" di sebelah file pertama. */
   outDir: string
   zip: boolean
+  /** Paket per agensi: tiap agensi dapat folder sendiri dengan jenis file yang diterimanya. Kosong = mati. */
+  agencies?: AlphaAgency[]
+  /** Tandai semua gambar sebagai buatan AI (selain yang sudah tercatat AI dari Buat Gambar). */
+  aiSource?: boolean
 }
 export type AlphaInfo = { path: string; name: string; width: number; height: number; bg: 'black' | 'white' | 'color'; color: string; thumb: string }
 export type AlphaProgress = { done: number; total: number; current: string; errors: number }
-export type AlphaResult = { outDir: string; pngs: string[]; files: number; zipPath?: string; errors: { path: string; error: string }[]; canceled: boolean }
+export type AlphaResult = {
+  outDir: string
+  pngs: string[]
+  files: number
+  zipPath?: string
+  errors: { path: string; error: string }[]
+  canceled: boolean
+  /** File utama tiap agensi (PNG/JPG/PSD) untuk diberi metadata. */
+  agencyFiles?: string[]
+  /** Catatan per agensi, mis. file AI yang dilewati untuk Shutterstock. */
+  notes?: string[]
+}
 
 export type GenAction = 'keep' | 'discard' | 'retry' | 'again' | 'cancel'
 

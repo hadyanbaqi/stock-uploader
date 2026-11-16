@@ -85,6 +85,24 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
   Windows: installer berjalan senyap lalu aplikasi terbuka lagi. Mac: aplikasi lama diganti lalu dibuka lagi;
   kalau dijalankan dari DMG atau folder yang tidak bisa ditulisi, DMG dibuka untuk dipasang manual.
 
+**Versi 1.7.0: Transparan → paket per agensi**
+
+Centang agensi di Transparan → tiap agensi dapat folder sendiri (nama folder sama dengan upload otomatis):
+
+| Folder | File | Syarat (dicek Nov 2026) |
+| --- | --- | --- |
+| `ADOBE-STOCK/` | PNG transparan | 4–100 MP, ≤ 45 MB, sRGB; PNG lewat portal web |
+| `SHUTTERSTOCK/` | JPG (efek di latar aslinya) | ≥ 4 MP sRGB. PNG/PSD ditolak; EPS hanya vektor asli. Tidak menerima AI |
+| `FREEPIK/` | `nama.psd` + `nama.jpg` | PSD 1,5–250 MB; JPG 2.000–10.000 px, nama sama |
+| `VECTEEZY/` | PNG transparan | ≥ 4 MP, ≤ 50 MB |
+| `POND5/` | PNG transparan | ≥ 2.000 px. Tidak menerima AI |
+| `123RF/` | JPG | ≥ 6 MP, ≤ 30 MB |
+| `DREAMSTIME/`, `DEPOSITPHOTOS/` | JPG | ≥ 3 / 4 MP |
+| `ALAMY/` | JPG | ≥ 17 MB tanpa kompresi (±6 MP). Tidak menerima AI |
+
+Gambar diperbesar otomatis sampai memenuhi semua agensi terpilih. Gambar AI (dari Buat Gambar atau dicentang
+"buatan AI") dilewati untuk agensi yang menolak AI. ZIP menyimpan folder agensinya.
+
 **Versi 1.4.0: Transparan (VFX → PNG transparan)**
 
 - Halaman **Transparan**: seret atau pilih gambar/folder (atau "Jadikan transparan" dari Buat Gambar).
