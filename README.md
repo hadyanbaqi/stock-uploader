@@ -143,15 +143,12 @@ Persiapan sekali saja:
 
 Setiap rilis:
 
-```bash
-# 1. naikkan "version" di package.json (mis. 1.7.0), commit, push ke main
-# 2. buat tag dengan catatan "Apa yang baru", lalu push tag-nya
-git tag -a v1.7.0 -m "Metadata: dukung PSD + JPG pratinjau Freepik"
-git push origin v1.7.0
-```
+1. Naikkan `"version"` di package.json (mis. 1.7.0), commit, push ke main.
+2. Buka **Actions → Rilis → Run workflow**, isi catatan "Apa yang baru", klik **Run workflow**.
+   (Atau lewat tag: `git tag -a v1.7.0 -m "catatan" && git push origin v1.7.0`.)
 
 Workflow **Rilis** membuat installer Windows + Mac, menjalankan semua tes, lalu menerbitkan rilis `v1.7.0` beserta
-`latest.json`. Tag harus sama dengan versi di package.json. Tag dengan tanda hubung (mis. `v1.7.0-beta.1`)
+`latest.json`. Versi diambil dari package.json (kalau lewat tag, tag harus sama). Tag dengan tanda hubung (mis. `v1.7.0-beta.1`)
 diterbitkan sebagai pra-rilis dan tidak ditawarkan ke aplikasi.
 
 Versi pertama yang punya fitur ini harus dipasang manual sekali; setelah itu pembaruan datang sendiri.

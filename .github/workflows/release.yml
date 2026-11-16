@@ -1,9 +1,10 @@
 name: Rilis
 
 # Terbitkan versi baru ke repo publik hadyanbaqi/stock-uploader-releases supaya aplikasi bisa
-# memperbarui dirinya sendiri. Cara pakai: naikkan "version" di package.json, commit, lalu
-#   git tag v1.7.0 && git push origin v1.7.0
-# Isi pesan tag (git tag -a v1.7.0 -m "…") dipakai sebagai catatan "Apa yang baru".
+# memperbarui dirinya sendiri. Naikkan "version" di package.json dan push ke main, lalu salah satu:
+#   a) Actions > Rilis > Run workflow (isi catatan "Apa yang baru"), atau
+#   b) git tag -a v1.7.0 -m "catatan" && git push origin v1.7.0
+# Versi selalu diambil dari package.json.
 #
 # Butuh secret RELEASES_TOKEN di repo ini: token GitHub (fine-grained) dengan izin
 # "Contents: Read and write" hanya untuk repo hadyanbaqi/stock-uploader-releases.
@@ -11,6 +12,12 @@ name: Rilis
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: 'Catatan "Apa yang baru" (kosong = pesan commit terakhir)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -27,11 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: v
-        name: Tag harus sama dengan versi di package.json
+        name: Versi dari package.json (kalau lewat tag, harus sama)
         run: |
           PKG=$(node -p "require('./package.json').version")
           TAG="${GITHUB_REF_NAME#v}"
-          if [ "$PKG" != "$TAG" ]; then
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$PKG" != "$TAG" ]; then
             echo "::error::Tag $GITHUB_REF_NAME tidak sama dengan versi package.json ($PKG). Naikkan versi di package.json dulu."
             exit 1
           fi
@@ -63,10 +70,15 @@ jobs:
         with:
           path: installer
 
-      - name: Catatan rilis (pesan tag, atau pesan commit)
+      - name: Catatan rilis (isian tombol, pesan tag, atau pesan commit)
+        env:
+          INPUT_NOTES: ${{ github.event.inputs.notes }}
         run: |
-          git fetch --depth=1 origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}" || true
-          NOTES=$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")
+          NOTES="$INPUT_NOTES"
+          if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ] && [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            git fetch --depth=1 origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}" || true
+            NOTES=$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")
+          fi
           if [ -z "$(echo "$NOTES" | tr -d '[:space:]')" ]; then NOTES=$(git log -1 --format=%B); fi
           printf '%s\n' "$NOTES" > catatan.md
 
