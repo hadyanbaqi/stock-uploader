@@ -18,6 +18,7 @@
     "test:gen": "node scripts/test-imagegen.mts",
     "test:alpha": "node scripts/test-alpha.mts",
     "test:profiles": "node scripts/test-profiles.mts",
+    "test:psd": "node scripts/test-psd.mts",
     "test:app": "electron-vite build && node scripts/test-app.mts",
     "dist:win": "electron-vite build && electron-builder --win --publish never",
     "dist:mac": "electron-vite build && electron-builder --mac --publish never"

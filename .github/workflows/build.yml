@@ -56,6 +56,9 @@ jobs:
       - name: Tes Profil Browser (format proxy, flag Chrome, perantara proxy, cek IP)
         run: npm run test:profiles
 
+      - name: Tes pembaca PSD (mode warna, 16 bit, RLE, PSB)
+        run: npm run test:psd
+
       - name: Tes aplikasi asli (upload, riwayat, metadata)
         timeout-minutes: 10
         run: npm run test:app

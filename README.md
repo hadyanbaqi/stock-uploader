@@ -35,7 +35,7 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Video dilihat utuh: 9 frame jadi 1 lembar kontak (mode Hemat) atau 12 frame terpisah (mode Detail), plus data teknis (resolusi, durasi, loop, green screen)
 - Mode Hemat (go/gemini-3.1-flash-lite), Gratis (nemotron free, otomatis pindah ke Hemat kalau penuh), Detail
 - Aturan SEO otomatis: judul ≤70 karakter, keyword ≤49 tanpa dobel/merek, kata judul masuk 10 keyword pertama
-- Simpan ke file (ExifTool) untuk JPG, PNG, EPS, AI, MP4, MOV; file asli dicadangkan dulu
+- Simpan ke file (ExifTool) untuk JPG, PNG, PSD, EPS, AI, MP4, MOV; file asli dicadangkan dulu
 - Download CSV untuk Adobe Stock, Shutterstock, Vecteezy, Freepik, Pond5, Dreamstime, 123RF
 - EPS/AI/ZIP dibaca lewat JPG pratinjau dengan nama sama
 - API key Ciora disimpan terenkripsi di Pengaturan
@@ -61,6 +61,10 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Grup di panel kiri, cari, pindah grup, duplikat setelan (tanpa login), halaman awal per profil (preset dasbor agensi).
 - Password proxy disimpan terenkripsi seperti password FTP. Chrome/Chromium/Brave/Edge dicari otomatis atau dipilih manual.
 - Catatan: sidik jari browser (layar, font, WebGL) sama di semua profil; fitur ini untuk mengelola akun tim/klien.
+- **Metadata untuk PSD/PSB:** AI membaca gambar gabungan PSD langsung (tanpa JPG pratinjau); judul, deskripsi, dan
+  keyword ditanam ke PSD (XMP + IPTC). Saat "Simpan ke file", JPG pratinjau bernama sama dibuat otomatis kalau belum
+  ada (wajib untuk Freepik/Magnific, maks 10.000 px), lengkap dengan metadata. Didukung RGB, CMYK, Grayscale,
+  Indexed, 8/16 bit; PSD harus disimpan dengan "Maximize PSD Compatibility" aktif (bawaan Photoshop).
 
 **Versi 1.4.0: Transparan (VFX → PNG transparan)**
 
@@ -130,6 +134,7 @@ npm run test:csv     # tes impor CSV, folder agensi, metadata-master, pindah fil
 npm run test:gen     # tes Buat Gambar: Ciora tiruan, nama file, ZIP
 npm run test:alpha   # tes Transparan: alpha, PNG, PSD
 npm run test:profiles # tes Profil Browser: format proxy, flag Chrome, perantara proxy, cek IP
+npm run test:psd     # tes pembaca PSD: mode warna, 16 bit, RLE, PSB, file rusak
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

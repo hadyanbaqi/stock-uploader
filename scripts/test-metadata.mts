@@ -154,6 +154,27 @@ for (const [name, b64] of [['foto.jpg', JPG], ['gambar.png', PNG]] as const) {
     check(`${name}: tanam metadata`, false, String(err))
   }
 }
+// PSD berlapis kecil (penulis PSD dari fitur Transparan) → judul/keyword tertanam, gambar tetap terbaca.
+{
+  const { encodePsd } = await import('../src/main/alpha.ts')
+  const { readPsdComposite } = await import('../src/main/psd.ts')
+  const w = 8
+  const h = 8
+  const fg = new Uint8Array(w * h * 4)
+  for (let i = 0; i < w * h; i++) fg.set([200, 40, 40, i % 2 ? 255 : 0], i * 4)
+  const f = path.join(dir, 'desain.psd')
+  writeFileSync(f, encodePsd(fg, w, h, [255, 255, 255]))
+  try {
+    await injectMeta(f, meta, path.join(dir, 'cadangan'))
+    const back = await readMeta(f)
+    check('desain.psd: judul, deskripsi, keyword tertanam', back.title === meta.title && back.description === meta.description && back.keywords.join('|') === meta.keywords.join('|'), JSON.stringify(back))
+    const { readFileSync } = await import('node:fs')
+    const img = readPsdComposite(readFileSync(f))
+    check('desain.psd: gambar gabungan masih terbaca setelah ditanami', img.w === w && img.rgba[4] === 200 && img.rgba[0] === 255, `${img.rgba[0]},${img.rgba[4]}`)
+  } catch (err) {
+    check('desain.psd: tanam metadata', false, String(err))
+  }
+}
 const svg = path.join(dir, 'ikon.svg')
 writeFileSync(svg, '<svg xmlns="http://www.w3.org/2000/svg"/>')
 const e = await injectMeta(svg, meta, path.join(dir, 'cadangan')).then(() => null, (err: Error) => err)

@@ -246,7 +246,8 @@ export type Api = {
   metaUpdate(path: string, patch: Partial<FileMeta>): Promise<MetaRecord>
   metaGenerate(paths: string[], overwrite: boolean): Promise<{ queued: number; skipped: number }>
   metaCancel(): Promise<void>
-  metaInject(paths: string[]): Promise<{ saved: number; csvOnly: number; failed: number }>
+  /** previews = JPG pratinjau PSD yang baru dibuat; smallPreviews = yang sisi terpanjangnya < 2.000 px. */
+  metaInject(paths: string[]): Promise<{ saved: number; csvOnly: number; failed: number; previews: number; smallPreviews: string[] }>
   /** Pilih folder lalu simpan CSV untuk tiap agensi. null kalau dibatalkan. */
   metaExportCsv(paths: string[], agencies: string[]): Promise<{ files: string[]; rows: number } | null>
   /**

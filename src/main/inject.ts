@@ -38,7 +38,8 @@ export async function injectMeta(filePath: string, meta: FileMeta, backupDir: st
     'XMP-dc:Subject': keywords,
     'XMP-photoshop:Headline': meta.title
   }
-  if (ext === 'jpg' || ext === 'jpeg') {
+  if (ext === 'jpg' || ext === 'jpeg' || ext === 'psd' || ext === 'psb') {
+    // PSD menyimpan IPTC di bagian resource Photoshop; ExifTool bisa menulisnya.
     Object.assign(tags, {
       'IPTC:ObjectName': meta.title.slice(0, 64),
       'IPTC:Headline': meta.title,

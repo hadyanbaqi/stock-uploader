@@ -126,7 +126,7 @@ export const EMPTY_META: FileMeta = {
 
 /** Bisa ditanam ke file? SVG dan ZIP hanya lewat CSV. */
 export function canInject(ext: string): boolean {
-  return ['jpg', 'jpeg', 'png', 'eps', 'ai', 'mp4', 'mov'].includes(ext.toLowerCase())
+  return ['jpg', 'jpeg', 'png', 'eps', 'ai', 'psd', 'psb', 'mp4', 'mov'].includes(ext.toLowerCase())
 }
 
 // Nama merek dan nama dagang yang dilarang di keyword stok. Kata umum yang juga

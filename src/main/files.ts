@@ -8,6 +8,8 @@ export const FILE_KINDS: Record<string, FileKind> = {
   jpg: 'image',
   jpeg: 'image',
   png: 'image',
+  psd: 'image',
+  psb: 'image',
   eps: 'vector',
   ai: 'vector',
   svg: 'vector',

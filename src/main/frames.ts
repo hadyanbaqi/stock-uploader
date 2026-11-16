@@ -1,8 +1,10 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, nativeImage } from 'electron'
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { AiMode } from '../shared/metadata'
+import { encodePng } from './alpha'
+import { flattenOnWhite, readPsdComposite } from './psd'
 
 /**
  * Membaca gambar dan video memakai mesin Chromium bawaan Electron (jendela tersembunyi),
@@ -234,20 +236,38 @@ export async function makePreview(filePath: string, mode: AiMode): Promise<Previ
   }
 
   let source = filePath
+  let tempFile: string | null = null
+  let psdInfo: { width: number; height: number; hasAlpha: boolean } | null = null
   if (!['jpg', 'jpeg', 'png', 'svg'].includes(ext)) {
     const sib = siblingPreview(filePath)
-    if (!sib) {
+    if (sib) {
+      source = sib
+    } else if (ext === 'psd' || ext === 'psb') {
+      // PSD tanpa JPG pratinjau: baca gambar gabungannya langsung.
+      const img = readPsdComposite(await fs.readFile(filePath), 1024)
+      psdInfo = { width: img.width, height: img.height, hasAlpha: img.hasAlpha }
+      tempFile = path.join(app.getPath('temp'), `su-psd-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.png`)
+      await fs.writeFile(tempFile, await encodePng(img.rgba, img.w, img.h))
+      source = tempFile
+    } else {
       throw new Error(`File .${ext.toUpperCase()} tidak bisa dilihat langsung. Taruh gambar JPG pratinjau dengan nama yang sama di folder yang sama (mis. ${path.basename(filePath, path.extname(filePath))}.jpg).`)
     }
-    source = sib
   }
-  const im = await run<ImageGrab>(`grabImage(${JSON.stringify(pathToFileURL(source).href)}, 1024)`).catch((err) => {
-    throw new Error(`Gagal membaca gambar: ${String((err as Error)?.message ?? err)}`)
-  })
-  const kind = ext === 'eps' || ext === 'ai' || ext === 'svg' ? 'vector illustration' : ext === 'zip' ? 'file package' : 'image'
+  let im: ImageGrab
+  try {
+    im = await run<ImageGrab>(`grabImage(${JSON.stringify(pathToFileURL(source).href)}, 1024)`).catch((err) => {
+      throw new Error(`Gagal membaca gambar: ${String((err as Error)?.message ?? err)}`)
+    })
+  } finally {
+    if (tempFile) await fs.rm(tempFile, { force: true })
+  }
+  const isPsd = ext === 'psd' || ext === 'psb'
+  const kind = ext === 'eps' || ext === 'ai' || ext === 'svg' ? 'vector illustration' : ext === 'zip' ? 'file package' : isPsd ? 'layered PSD design file' : 'image'
+  const width = psdInfo?.width ?? im.width
+  const height = psdInfo?.height ?? im.height
   const tech = [
-    `${kind} ${im.width}x${im.height}`,
-    im.transparent && ext !== 'jpg' && ext !== 'jpeg' ? 'transparent background' : '',
+    `${kind} ${width}x${height}`,
+    (psdInfo ? psdInfo.hasAlpha : im.transparent) && ext !== 'jpg' && ext !== 'jpeg' ? 'transparent background' : '',
     im.green ? 'green screen background' : ''
   ]
     .filter(Boolean)
@@ -276,4 +296,40 @@ export async function previewJpegFile(png: string, dest: string, style: string, 
     `previewJpeg(${JSON.stringify(pathToFileURL(png).href)}, ${JSON.stringify(style)}, ${JSON.stringify(color)}, ${JSON.stringify(text)}, 0.92)`
   )
   await fs.writeFile(dest, Buffer.from(url.split(',')[1], 'base64'))
+}
+
+/** nativeImage memakai urutan piksel BGRA di Windows/Mac; cek sekali supaya pasti. */
+let nativeBgra: boolean | null = null
+function isNativeBgra(): boolean {
+  if (nativeBgra !== null) return nativeBgra
+  const red = nativeImage.createFromDataURL(
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+  )
+  const b = red.toBitmap()
+  nativeBgra = b[2] > 200 && b[0] < 50
+  return nativeBgra
+}
+
+/** Batas pratinjau Freepik/Magnific untuk PSD: sisi terpanjang 2.000–10.000 px. */
+export const PSD_PREVIEW_MIN = 2000
+export const PSD_PREVIEW_MAX = 10000
+
+/**
+ * Buat JPG pratinjau dari gambar gabungan PSD (transparan → putih), sisi terpanjang paling besar 10.000 px.
+ * Mengembalikan ukuran hasil.
+ */
+export async function psdPreviewJpeg(psdPath: string, dest: string): Promise<{ width: number; height: number }> {
+  const img = readPsdComposite(await fs.readFile(psdPath), PSD_PREVIEW_MAX)
+  const px = img.hasAlpha ? flattenOnWhite(img.rgba) : img.rgba
+  if (isNativeBgra()) {
+    for (let i = 0; i < px.length; i += 4) {
+      const t = px[i]
+      px[i] = px[i + 2]
+      px[i + 2] = t
+    }
+  }
+  const ni = nativeImage.createFromBitmap(Buffer.from(px.buffer, px.byteOffset, px.byteLength), { width: img.w, height: img.h })
+  if (ni.isEmpty()) throw new Error('JPG pratinjau gagal dibuat dari PSD.')
+  await fs.writeFile(dest, ni.toJPEG(92))
+  return { width: img.w, height: img.h }
 }
