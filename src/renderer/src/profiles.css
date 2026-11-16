@@ -1,0 +1,436 @@
+/* Halaman Profil Browser */
+
+.pf-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .pf-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pf-groups {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  position: sticky;
+  top: 0;
+}
+
+.pf-groups-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 8px;
+}
+
+.pf-group-form {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pf-group-form input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+
+.pf-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pf-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.pf-group > span:first-child,
+.pf-group-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-group-name {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
+.pf-group:hover {
+  background: var(--bg);
+}
+
+.pf-group.active {
+  background: var(--run-bg);
+  color: var(--run-text);
+  font-weight: 600;
+}
+
+.pf-icon {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+  opacity: 0;
+}
+
+.pf-group:hover .pf-icon,
+.pf-group.active .pf-icon {
+  opacity: 1;
+}
+
+.pf-main {
+  min-width: 0;
+}
+
+.pf-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pf-search {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 5px 10px;
+  width: 240px;
+  max-width: 100%;
+}
+
+.pf-move {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: inherit;
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 12.5px;
+}
+
+.pf-table tbody tr {
+  cursor: default;
+  user-select: none;
+}
+
+.pf-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+.pf-table tr.pf-selected td {
+  background: var(--run-bg);
+}
+
+.pf-check {
+  width: 28px;
+}
+
+.pf-name {
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-sub {
+  margin-top: 2px;
+  margin-left: 16px;
+}
+
+.pf-tag {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 7px;
+  margin-right: 6px;
+  font-size: 11px;
+}
+
+.pf-path {
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.pf-proxy {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-proxy code {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pf-table td {
+  vertical-align: middle;
+}
+
+.pf-more {
+  display: inline-block;
+  position: relative;
+  margin-left: 4px;
+}
+
+.pf-more > summary {
+  list-style: none;
+  display: inline-block;
+}
+
+.pf-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pf-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  text-align: left;
+}
+
+.pf-menu button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.pf-menu button:hover {
+  background: var(--bg);
+}
+
+.pf-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pf-ip {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.pf-err {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.pf-pill-warn {
+  background: #fff4e0;
+  color: #9a5b00;
+  border-color: transparent;
+}
+
+html[data-dark] .pf-pill-warn,
+:root[data-theme='dark'] .pf-pill-warn {
+  background: #33240a;
+  color: #ffc56b;
+}
+
+.pf-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.pf-actions .btn + .btn {
+  margin-left: 4px;
+}
+
+.pf-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.pf-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pf-num {
+  width: 64px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.pf-pre {
+  white-space: pre-line;
+  cursor: pointer;
+}
+
+.pf-foot {
+  margin-top: 8px;
+}
+
+/* Formulir */
+.modal.wide {
+  width: min(760px, 100%);
+}
+
+.proxy-box {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+}
+
+.proxy-box > input {
+  border: 1px dashed var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.proxy-grid {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 90px;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.proxy-grid .field:nth-child(4) {
+  grid-column: 1 / 2;
+}
+
+.proxy-grid .field:nth-child(5) {
+  grid-column: 2 / 4;
+}
+
+.field textarea {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: inherit;
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.field .chips {
+  margin: 6px 0 0;
+}
+
+.field .chips .chip {
+  padding: 2px 9px;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ok-text {
+  color: var(--ok-text);
+}
+
+/* Pembaruan aplikasi */
+.upd-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--run-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 14px 32px 0;
+}
+
+.upd-text {
+  flex: 1;
+  min-width: 220px;
+}
+
+.upd-actions,
+.upd-row,
+.upd-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.upd-bar {
+  display: inline-block;
+  width: 140px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.upd-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent, #4f8bff);
+  transition: width 0.2s;
+}
+
+.upd-notes pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 12.5px;
+  margin: 6px 0 0;
+  max-height: 180px;
+  overflow: auto;
+}

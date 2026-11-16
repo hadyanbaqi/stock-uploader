@@ -1,12 +1,12 @@
 import { app, BrowserWindow } from 'electron'
 import { createHash } from 'node:crypto'
-import { promises as fs } from 'node:fs'
+import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
 import { AGENCY_CSV, canInject, EMPTY_META, type FileMeta, type MetaRecord } from '../shared/metadata'
 import { generateMeta } from './ai'
 import { buildCsv } from './csv'
 import { lookupCsv } from './csvimport'
-import { makePreview } from './frames'
+import { makePreview, psdPreviewJpeg, PSD_PREVIEW_MIN } from './frames'
 import { injectMeta } from './inject'
 import { getAiKey, getSettings } from './store'
 
@@ -208,12 +208,23 @@ async function runOne(p: string): Promise<void> {
   scheduleSave()
 }
 
-export async function inject(paths: string[]): Promise<{ saved: number; csvOnly: number; failed: number }> {
+/** JPG pratinjau dengan nama sama di folder yang sama, kalau ada. */
+function previewSibling(p: string): string | null {
+  const base = p.slice(0, p.length - path.extname(p).length)
+  for (const e of ['jpg', 'jpeg', 'JPG', 'JPEG']) if (existsSync(`${base}.${e}`)) return `${base}.${e}`
+  return null
+}
+
+export async function inject(
+  paths: string[]
+): Promise<{ saved: number; csvOnly: number; failed: number; previews: number; smallPreviews: string[] }> {
   const all = await load()
   const backupDir = path.join(app.getPath('userData'), 'cadangan-file-asli')
   let saved = 0
   let csvOnly = 0
   let failed = 0
+  let previews = 0
+  const smallPreviews: string[] = []
   for (const p of paths) {
     const r = all[p]
     if (!r || !r.title || busy.has(p)) continue
@@ -227,6 +238,18 @@ export async function inject(paths: string[]): Promise<{ saved: number; csvOnly:
       const st = await fs.stat(p)
       all[p] = { ...r, size: st.size, status: 'saved', injectedAt: Date.now(), error: undefined }
       saved++
+      // Freepik/Magnific: PSD wajib disertai JPG pratinjau bernama sama. Buat kalau belum ada.
+      if ((ext.toLowerCase() === 'psd' || ext.toLowerCase() === 'psb') && !previewSibling(p)) {
+        const jpg = `${p.slice(0, p.length - path.extname(p).length)}.jpg`
+        try {
+          const size = await psdPreviewJpeg(p, jpg)
+          await injectMeta(jpg, r, backupDir)
+          previews++
+          if (Math.max(size.width, size.height) < PSD_PREVIEW_MIN) smallPreviews.push(path.basename(jpg))
+        } catch (err) {
+          all[p] = { ...all[p], error: `Metadata tertanam, tapi JPG pratinjau gagal dibuat: ${String((err as Error)?.message ?? err)}` }
+        }
+      }
     } catch (err) {
       const msg = String((err as Error)?.message ?? err)
       all[p] = {
@@ -240,7 +263,7 @@ export async function inject(paths: string[]): Promise<{ saved: number; csvOnly:
     await emit(p)
   }
   scheduleSave()
-  return { saved, csvOnly, failed }
+  return { saved, csvOnly, failed, previews, smallPreviews }
 }
 
 export async function exportCsv(paths: string[], agencies: string[], folder: string): Promise<{ files: string[]; rows: number }> {

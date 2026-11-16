@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Dipanggil oleh release.yml saat menerbitkan versi baru.
+  workflow_call:
 
 jobs:
   build:
@@ -52,6 +54,15 @@ jobs:
 
       - name: Tes Transparan (alpha, PNG, PSD)
         run: npm run test:alpha
+
+      - name: Tes Profil Browser (format proxy, flag Chrome, perantara proxy, cek IP)
+        run: npm run test:profiles
+
+      - name: Tes pembaca PSD (mode warna, 16 bit, RLE, PSB)
+        run: npm run test:psd
+
+      - name: Tes pembaruan aplikasi (versi, unduh + SHA-256, skrip ganti aplikasi Mac)
+        run: npm run test:update
 
       - name: Tes aplikasi asli (upload, riwayat, metadata)
         timeout-minutes: 10

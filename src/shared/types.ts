@@ -1,4 +1,6 @@
 import type { AiMode, FileMeta, MetaRecord } from './metadata'
+import type { UpdateState } from './update'
+import type { BrowserProfile, IpStatus, OpenResult, ProfileGroup, ProfileInput, ProfilesState } from './profiles'
 
 export type Protocol = 'ftp' | 'ftps' | 'sftp'
 
@@ -130,6 +132,12 @@ export type Settings = {
   genAutoZip: boolean
   /** Galeri dikosongkan tiap kali mulai membuat gambar baru. */
   genClearOnStart: boolean
+  /** Profil browser: lokasi Chrome ('' = cari otomatis), jeda antarprofil saat buka banyak (detik), tes proxy dulu sebelum membuka. */
+  browserPath: string
+  browserDelay: number
+  browserTestFirst: boolean
+  /** Cek pembaruan aplikasi otomatis saat dibuka dan tiap 6 jam. */
+  autoUpdate: boolean
 }
 
 export type GenStatus = 'queued' | 'running' | 'ready' | 'saved' | 'discarded' | 'failed' | 'rejected' | 'canceled'
@@ -241,7 +249,8 @@ export type Api = {
   metaUpdate(path: string, patch: Partial<FileMeta>): Promise<MetaRecord>
   metaGenerate(paths: string[], overwrite: boolean): Promise<{ queued: number; skipped: number }>
   metaCancel(): Promise<void>
-  metaInject(paths: string[]): Promise<{ saved: number; csvOnly: number; failed: number }>
+  /** previews = JPG pratinjau PSD yang baru dibuat; smallPreviews = yang sisi terpanjangnya < 2.000 px. */
+  metaInject(paths: string[]): Promise<{ saved: number; csvOnly: number; failed: number; previews: number; smallPreviews: string[] }>
   /** Pilih folder lalu simpan CSV untuk tiap agensi. null kalau dibatalkan. */
   metaExportCsv(paths: string[], agencies: string[]): Promise<{ files: string[]; rows: number } | null>
   /**
@@ -289,4 +298,30 @@ export type Api = {
 
   getSettings(): Promise<Settings>
   saveSettings(s: Partial<Settings>): Promise<Settings>
+
+  profilesState(): Promise<ProfilesState>
+  profileSave(input: ProfileInput): Promise<BrowserProfile>
+  profileDuplicate(id: string): Promise<BrowserProfile>
+  /** deleteData = folder data Chrome (login, cookie) ikut dihapus. */
+  profileRemove(ids: string[], deleteData: boolean): Promise<void>
+  profileGroupSave(group: { id?: string; name: string }): Promise<ProfileGroup>
+  profileGroupRemove(id: string): Promise<void>
+  profileMove(ids: string[], groupId: string | null): Promise<void>
+  profileOpen(ids: string[]): Promise<OpenResult[]>
+  profileClose(ids: string[]): Promise<void>
+  profileTest(ids: string[]): Promise<void>
+  /** Tes proxy dari formulir (belum disimpan). */
+  profileTestInput(input: ProfileInput): Promise<IpStatus>
+  profileShowFolder(id: string): Promise<void>
+  /** Pilih file Chrome secara manual. null kalau dibatalkan. */
+  pickBrowser(): Promise<string | null>
+  onProfilesChanged(cb: (state: ProfilesState) => void): () => void
+
+  updateState(): Promise<UpdateState>
+  updateCheck(): Promise<UpdateState>
+  updateDownload(): Promise<UpdateState>
+  updateCancel(): Promise<void>
+  /** Tutup aplikasi dan pasang versi baru (tanya dulu kalau masih ada upload). */
+  updateInstall(): Promise<UpdateState>
+  onUpdate(cb: (state: UpdateState) => void): () => void
 }

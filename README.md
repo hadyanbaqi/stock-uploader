@@ -35,7 +35,7 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Video dilihat utuh: 9 frame jadi 1 lembar kontak (mode Hemat) atau 12 frame terpisah (mode Detail), plus data teknis (resolusi, durasi, loop, green screen)
 - Mode Hemat (go/gemini-3.1-flash-lite), Gratis (nemotron free, otomatis pindah ke Hemat kalau penuh), Detail
 - Aturan SEO otomatis: judul ≤70 karakter, keyword ≤49 tanpa dobel/merek, kata judul masuk 10 keyword pertama
-- Simpan ke file (ExifTool) untuk JPG, PNG, EPS, AI, MP4, MOV; file asli dicadangkan dulu
+- Simpan ke file (ExifTool) untuk JPG, PNG, PSD, EPS, AI, MP4, MOV; file asli dicadangkan dulu
 - Download CSV untuk Adobe Stock, Shutterstock, Vecteezy, Freepik, Pond5, Dreamstime, 123RF
 - EPS/AI/ZIP dibaca lewat JPG pratinjau dengan nama sama
 - API key Ciora disimpan terenkripsi di Pengaturan
@@ -45,6 +45,31 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ikon aplikasi, tema terang/gelap/ikuti sistem di Pengaturan
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
+
+**Versi 1.6.0: Profil Browser**
+
+- Halaman **Profil Browser**: satu profil = satu Chrome terpisah (login, cookie, riwayat, ekstensi sendiri), jadi
+  dasbor beberapa akun kontributor bisa dibuka bersamaan tanpa saling logout.
+- Proxy per profil: HTTP, HTTPS, SOCKS5, dengan atau tanpa username/password. Tempel dalam format apa pun
+  (`host:port:user:pass`, `user:pass@host:port`, `socks5://…`), langsung diisi ke formulir.
+- Proxy ber-password berjalan lewat perantara lokal di 127.0.0.1 (tanpa popup login, SOCKS5 juga bisa).
+  Gagal tertutup: kalau proxy mati, Chrome tidak bisa membuka halaman, tidak pernah lewat IP asli.
+- Tes IP satu/semua profil: "OK - IP x.x.x.x (ms)", "Gagal" dengan alasan, "Berubah - belum dites" setelah proxy diganti,
+  peringatan kalau dua profil keluar dengan IP yang sama.
+- Buka satu (klik dua kali), yang dipilih (Ctrl/Shift + klik), atau semua dalam grup dengan jeda antarprofil.
+  Proxy dites dulu sebelum Chrome dibuka (bisa dimatikan). WebRTC dibatasi supaya IP asli tidak bocor.
+- Grup di panel kiri, cari, pindah grup, duplikat setelan (tanpa login), halaman awal per profil (preset dasbor agensi).
+- Password proxy disimpan terenkripsi seperti password FTP. Chrome/Chromium/Brave/Edge dicari otomatis atau dipilih manual.
+- Catatan: sidik jari browser (layar, font, WebGL) sama di semua profil; fitur ini untuk mengelola akun tim/klien.
+- **Metadata untuk PSD/PSB:** AI membaca gambar gabungan PSD langsung (tanpa JPG pratinjau); judul, deskripsi, dan
+  keyword ditanam ke PSD (XMP + IPTC). Saat "Simpan ke file", JPG pratinjau bernama sama dibuat otomatis kalau belum
+  ada (wajib untuk Freepik/Magnific, maks 10.000 px), lengkap dengan metadata. Didukung RGB, CMYK, Grayscale,
+  Indexed, 8/16 bit; PSD harus disimpan dengan "Maximize PSD Compatibility" aktif (bawaan Photoshop).
+
+- **Pembaruan otomatis:** aplikasi mengecek versi baru saat dibuka dan tiap 6 jam (bisa dimatikan di Pengaturan).
+  Muncul banner "Versi baru tersedia" → Download (dicek SHA-256) → Pasang & buka ulang.
+  Windows: installer berjalan senyap lalu aplikasi terbuka lagi. Mac: aplikasi lama diganti lalu dibuka lagi;
+  kalau dijalankan dari DMG atau folder yang tidak bisa ditulisi, DMG dibuka untuk dipasang manual.
 
 **Versi 1.4.0: Transparan (VFX → PNG transparan)**
 
@@ -101,6 +126,36 @@ Saat pertama dibuka akan muncul peringatan karena aplikasi tidak bertanda tangan
 - **Windows:** klik "More info" lalu "Run anyway".
 - **Mac:** klik kanan aplikasi > Open > Open. Kalau tetap diblokir: System Settings > Privacy & Security > Open Anyway.
 
+## Menerbitkan versi baru (pembaruan otomatis)
+
+Kode tetap di repo ini (private). Installer diterbitkan ke repo publik
+[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), tempat aplikasi mengecek
+pembaruan (`latest.json` berisi versi, catatan, ukuran, dan sidik SHA-256 tiap installer).
+
+Persiapan sekali saja:
+
+1. Buat repo **publik** kosong `hadyanbaqi/stock-uploader-releases` (centang "Add a README" supaya tidak kosong).
+2. Buat token: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
+   Repository access: **Only select repositories** → `stock-uploader-releases`.
+   Permissions: **Contents: Read and write**. Simpan tokennya.
+3. Di repo ini: Settings → Secrets and variables → Actions → New repository secret,
+   nama `RELEASES_TOKEN`, isi dengan token tadi.
+
+Setiap rilis:
+
+```bash
+# 1. naikkan "version" di package.json (mis. 1.7.0), commit, push ke main
+# 2. buat tag dengan catatan "Apa yang baru", lalu push tag-nya
+git tag -a v1.7.0 -m "Metadata: dukung PSD + JPG pratinjau Freepik"
+git push origin v1.7.0
+```
+
+Workflow **Rilis** membuat installer Windows + Mac, menjalankan semua tes, lalu menerbitkan rilis `v1.7.0` beserta
+`latest.json`. Tag harus sama dengan versi di package.json. Tag dengan tanda hubung (mis. `v1.7.0-beta.1`)
+diterbitkan sebagai pra-rilis dan tidak ditawarkan ke aplikasi.
+
+Versi pertama yang punya fitur ini harus dipasang manual sekali; setelah itu pembaruan datang sendiri.
+
 ## Untuk pengembang
 
 ```bash
@@ -113,6 +168,9 @@ npm run test:meta    # tes metadata: aturan SEO, CSV, AI tiruan, ExifTool
 npm run test:csv     # tes impor CSV, folder agensi, metadata-master, pindah file
 npm run test:gen     # tes Buat Gambar: Ciora tiruan, nama file, ZIP
 npm run test:alpha   # tes Transparan: alpha, PNG, PSD
+npm run test:profiles # tes Profil Browser: format proxy, flag Chrome, perantara proxy, cek IP
+npm run test:psd     # tes pembaca PSD: mode warna, 16 bit, RLE, PSB, file rusak
+npm run test:update  # tes pembaruan: versi, latest.json, unduh + SHA-256, skrip ganti aplikasi Mac
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

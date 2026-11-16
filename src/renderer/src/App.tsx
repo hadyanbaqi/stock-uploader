@@ -5,11 +5,13 @@ import AlphaPage from './pages/AlphaPage'
 import GeneratePage from './pages/GeneratePage'
 import HistoryPage from './pages/HistoryPage'
 import MetadataPage from './pages/MetadataPage'
+import ProfilesPage from './pages/ProfilesPage'
+import UpdateBanner from './components/UpdateBanner'
 import QueuePage from './pages/QueuePage'
 import SettingsPage from './pages/SettingsPage'
 import UploadPage from './pages/UploadPage'
 
-type PageKey = 'upload' | 'generate' | 'alpha' | 'metadata' | 'queue' | 'history' | 'accounts' | 'settings'
+type PageKey = 'upload' | 'generate' | 'alpha' | 'metadata' | 'queue' | 'history' | 'accounts' | 'profiles' | 'settings'
 
 const PAGES: { key: PageKey; label: string; icon: string }[] = [
   { key: 'upload', label: 'Upload', icon: '⇪' },
@@ -19,6 +21,7 @@ const PAGES: { key: PageKey; label: string; icon: string }[] = [
   { key: 'queue', label: 'Antrean', icon: '☰' },
   { key: 'history', label: 'Riwayat', icon: '⟲' },
   { key: 'accounts', label: 'Akun', icon: '◉' },
+  { key: 'profiles', label: 'Profil Browser', icon: '◫' },
   { key: 'settings', label: 'Pengaturan', icon: '⚙' }
 ]
 
@@ -131,6 +134,7 @@ export default function App() {
       </aside>
 
       <main className="content">
+        <UpdateBanner />
         {notice && (
           <div className="toast" role="status" onClick={() => setNotice('')}>
             {notice}
@@ -165,6 +169,8 @@ export default function App() {
           <HistoryPage />
         ) : page === 'accounts' ? (
           <AccountsPage />
+        ) : page === 'profiles' ? (
+          <ProfilesPage />
         ) : (
           <SettingsPage settings={settings} onChange={setSettings} />
         )}

@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Api, QueueTask } from '../shared/types'
 import type { MetaRecord } from '../shared/metadata'
+import type { ProfilesState } from '../shared/profiles'
+import type { UpdateState } from '../shared/update'
 
 const api: Api = {
   listAccounts: () => ipcRenderer.invoke('accounts:list'),
@@ -96,7 +98,37 @@ const api: Api = {
     return () => ipcRenderer.removeListener('alpha:progress', listener)
   },
   getSettings: () => ipcRenderer.invoke('settings:get'),
-  saveSettings: (s) => ipcRenderer.invoke('settings:save', s)
+  saveSettings: (s) => ipcRenderer.invoke('settings:save', s),
+
+  profilesState: () => ipcRenderer.invoke('profiles:state'),
+  profileSave: (input) => ipcRenderer.invoke('profiles:save', input),
+  profileDuplicate: (id) => ipcRenderer.invoke('profiles:duplicate', id),
+  profileRemove: (ids, deleteData) => ipcRenderer.invoke('profiles:remove', ids, deleteData),
+  profileGroupSave: (g) => ipcRenderer.invoke('profiles:groupSave', g),
+  profileGroupRemove: (id) => ipcRenderer.invoke('profiles:groupRemove', id),
+  profileMove: (ids, groupId) => ipcRenderer.invoke('profiles:move', ids, groupId),
+  profileOpen: (ids) => ipcRenderer.invoke('profiles:open', ids),
+  profileClose: (ids) => ipcRenderer.invoke('profiles:close', ids),
+  profileTest: (ids) => ipcRenderer.invoke('profiles:test', ids),
+  profileTestInput: (input) => ipcRenderer.invoke('profiles:testInput', input),
+  profileShowFolder: (id) => ipcRenderer.invoke('profiles:showFolder', id),
+  pickBrowser: () => ipcRenderer.invoke('profiles:pickBrowser'),
+  onProfilesChanged: (cb) => {
+    const listener = (_e: unknown, state: ProfilesState) => cb(state)
+    ipcRenderer.on('profiles:changed', listener)
+    return () => ipcRenderer.removeListener('profiles:changed', listener)
+  },
+
+  updateState: () => ipcRenderer.invoke('update:state'),
+  updateCheck: () => ipcRenderer.invoke('update:check'),
+  updateDownload: () => ipcRenderer.invoke('update:download'),
+  updateCancel: () => ipcRenderer.invoke('update:cancel'),
+  updateInstall: () => ipcRenderer.invoke('update:install'),
+  onUpdate: (cb) => {
+    const listener = (_e: unknown, state: UpdateState) => cb(state)
+    ipcRenderer.on('update:changed', listener)
+    return () => ipcRenderer.removeListener('update:changed', listener)
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Settings } from '../../../shared/types'
 import { AI_MODES, type AiMode } from '../../../shared/metadata'
+import { UpdateActions, useUpdate } from '../components/UpdateBanner'
 
 type Props = { settings: Settings | null; onChange: (s: Settings) => void }
 
@@ -10,6 +11,8 @@ export default function SettingsPage({ settings, onChange }: Props) {
   const [show, setShow] = useState(false)
   const [test, setTest] = useState<{ ok: boolean; message: string } | 'running' | null>(null)
   const [saved, setSaved] = useState('')
+  const [upd, setUpd] = useUpdate()
+  const [checking, setChecking] = useState(false)
 
   useEffect(() => {
     void window.api.hasAiKey().then(setHasKey)
@@ -39,7 +42,41 @@ export default function SettingsPage({ settings, onChange }: Props) {
     setSaved('API key dihapus.')
   }
 
+  async function checkNow() {
+    setChecking(true)
+    try {
+      setUpd(await window.api.updateCheck())
+    } finally {
+      setChecking(false)
+    }
+  }
+
   if (!settings) return null
+
+  const updText = (() => {
+    if (!upd) return ''
+    const when = upd.checkedAt ? ` (dicek ${new Date(upd.checkedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })})` : ''
+    switch (upd.status) {
+      case 'disabled':
+        return 'Pembaruan otomatis hanya aktif di aplikasi yang terpasang.'
+      case 'checking':
+        return 'Mengecek…'
+      case 'none':
+        return `Sudah versi terbaru${when}.`
+      case 'available':
+        return `Versi ${upd.latest} tersedia${when}.`
+      case 'downloading':
+        return `Mengunduh versi ${upd.latest}…`
+      case 'ready':
+        return `Versi ${upd.latest} sudah diunduh dan dicek, siap dipasang.`
+      case 'installing':
+        return 'Memasang…'
+      case 'error':
+        return `Gagal: ${upd.error ?? 'tidak diketahui'}${when}`
+      default:
+        return 'Belum dicek.'
+    }
+  })()
 
   return (
     <div className="page">
@@ -173,6 +210,39 @@ export default function SettingsPage({ settings, onChange }: Props) {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="panel settings">
+        <h2>Pembaruan aplikasi</h2>
+        <div className="setting-row">
+          <span className="setting-label">Versi sekarang</span>
+          <div className="upd-row">
+            <strong>{upd?.current ?? __APP_VERSION__}</strong>
+            <span className={`small ${upd?.status === 'error' ? 'danger-text' : 'muted'}`}>{updText}</span>
+          </div>
+        </div>
+        <div className="setting-row">
+          <span className="setting-label" />
+          <div className="upd-row">
+            <button className="btn small" disabled={checking || !upd || ['disabled', 'checking', 'downloading', 'installing'].includes(upd.status)} onClick={() => void checkNow()}>
+              {checking ? 'Mengecek…' : 'Cek pembaruan'}
+            </button>
+            {upd && <UpdateActions st={upd} onChange={setUpd} />}
+          </div>
+        </div>
+        <div className="setting-row">
+          <span className="setting-label" />
+          <label className="check">
+            <input type="checkbox" checked={settings.autoUpdate} onChange={(e) => void save({ autoUpdate: e.target.checked })} />
+            Cek otomatis saat aplikasi dibuka dan tiap 6 jam
+          </label>
+        </div>
+        {upd?.notes && ['available', 'downloading', 'ready'].includes(upd.status) && (
+          <details className="upd-notes">
+            <summary className="small">Apa yang baru di versi {upd.latest}</summary>
+            <pre>{upd.notes}</pre>
+          </details>
+        )}
       </section>
 
       <section className="panel settings">
