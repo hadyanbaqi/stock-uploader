@@ -381,3 +381,56 @@ html[data-dark] .pf-pill-warn,
 .ok-text {
   color: var(--ok-text);
 }
+
+/* Pembaruan aplikasi */
+.upd-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--run-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 14px 32px 0;
+}
+
+.upd-text {
+  flex: 1;
+  min-width: 220px;
+}
+
+.upd-actions,
+.upd-row,
+.upd-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.upd-bar {
+  display: inline-block;
+  width: 140px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.upd-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent, #4f8bff);
+  transition: width 0.2s;
+}
+
+.upd-notes pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 12.5px;
+  margin: 6px 0 0;
+  max-height: 180px;
+  overflow: auto;
+}

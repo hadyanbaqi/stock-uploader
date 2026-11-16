@@ -16,6 +16,7 @@ import { listImageModels } from './imagegen'
 import { cancelRun, expandImages, inspect as alphaInspect, preview as alphaPreview, runAlpha } from './alphajob'
 import { imageThumb } from './frames'
 import { ProfileManager, profileDir } from './profiles'
+import { Updater } from './updater'
 import type { FileMeta } from '../shared/metadata'
 import type { ProfileInput } from '../shared/profiles'
 import type { AccountGroup, AccountInput, AlphaOptions, GenAction, GenStartInput, QueueAction, QueueTask, Settings } from '../shared/types'
@@ -25,6 +26,7 @@ let history: History | null = null
 let after: AfterUpload | null = null
 let gen: GenQueue | null = null
 let profiles: ProfileManager | null = null
+let updater: Updater | null = null
 let blocker: number | null = null
 let quitting = false
 
@@ -387,6 +389,19 @@ function registerIpc(): void {
     return s
   })
 
+  ipcMain.handle('update:state', () => updater!.getState())
+  ipcMain.handle('update:check', () => updater!.check())
+  ipcMain.handle('update:download', () => updater!.download())
+  ipcMain.handle('update:cancel', () => updater!.cancelDownload())
+  ipcMain.handle('update:install', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined
+    // Tanya dulu (upload berjalan / profil Chrome terbuka) sebelum installer dijalankan.
+    if (!confirmQuit(win)) return updater!.getState()
+    return updater!.install(() => {
+      quitting = true
+      app.quit()
+    })
+  })
   ipcMain.handle('profiles:state', () => profiles!.state())
   ipcMain.handle('profiles:save', (_e, input: ProfileInput) => profiles!.save(input))
   ipcMain.handle('profiles:duplicate', (_e, id: string) => profiles!.duplicate(String(id)))
@@ -492,8 +507,12 @@ if (!gotLock) {
         for (const w of BrowserWindow.getAllWindows()) w.webContents.send('app:notice', text)
       }
     )
+    updater = new Updater((state) => {
+      for (const w of BrowserWindow.getAllWindows()) w.webContents.send('update:changed', state)
+    })
     registerIpc()
     const win = createWindow()
+    updater.start()
     if (process.env.SU_E2E) {
       quitting = true
       void import('./e2e').then((m) => m.runE2E(process.env.SU_E2E!, win, queue!))
@@ -515,6 +534,7 @@ if (!gotLock) {
     queue = null
     e.preventDefault()
     closeHelper()
+    updater?.stop()
     void Promise.allSettled([q.shutdown().then(() => after?.flush()), gen?.shutdown(), profiles?.shutdown(), flushMeta(), closeExifTool()]).finally(() => app.quit())
   })
 

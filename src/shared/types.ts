@@ -1,4 +1,5 @@
 import type { AiMode, FileMeta, MetaRecord } from './metadata'
+import type { UpdateState } from './update'
 import type { BrowserProfile, IpStatus, OpenResult, ProfileGroup, ProfileInput, ProfilesState } from './profiles'
 
 export type Protocol = 'ftp' | 'ftps' | 'sftp'
@@ -135,6 +136,8 @@ export type Settings = {
   browserPath: string
   browserDelay: number
   browserTestFirst: boolean
+  /** Cek pembaruan aplikasi otomatis saat dibuka dan tiap 6 jam. */
+  autoUpdate: boolean
 }
 
 export type GenStatus = 'queued' | 'running' | 'ready' | 'saved' | 'discarded' | 'failed' | 'rejected' | 'canceled'
@@ -313,4 +316,12 @@ export type Api = {
   /** Pilih file Chrome secara manual. null kalau dibatalkan. */
   pickBrowser(): Promise<string | null>
   onProfilesChanged(cb: (state: ProfilesState) => void): () => void
+
+  updateState(): Promise<UpdateState>
+  updateCheck(): Promise<UpdateState>
+  updateDownload(): Promise<UpdateState>
+  updateCancel(): Promise<void>
+  /** Tutup aplikasi dan pasang versi baru (tanya dulu kalau masih ada upload). */
+  updateInstall(): Promise<UpdateState>
+  onUpdate(cb: (state: UpdateState) => void): () => void
 }

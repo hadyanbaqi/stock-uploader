@@ -6,6 +6,7 @@ import GeneratePage from './pages/GeneratePage'
 import HistoryPage from './pages/HistoryPage'
 import MetadataPage from './pages/MetadataPage'
 import ProfilesPage from './pages/ProfilesPage'
+import UpdateBanner from './components/UpdateBanner'
 import QueuePage from './pages/QueuePage'
 import SettingsPage from './pages/SettingsPage'
 import UploadPage from './pages/UploadPage'
@@ -133,6 +134,7 @@ export default function App() {
       </aside>
 
       <main className="content">
+        <UpdateBanner />
         {notice && (
           <div className="toast" role="status" onClick={() => setNotice('')}>
             {notice}

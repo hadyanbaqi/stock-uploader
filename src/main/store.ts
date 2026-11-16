@@ -29,7 +29,7 @@ function jsonStore<T>(name: string, fallback: () => T) {
 }
 
 const groupsStore = jsonStore<{ groups: AccountGroup[] }>('groups.json', () => ({ groups: [] }))
-const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep', genDir: '', genModel: '', genAspect: '3:2', genAutoZip: true, genClearOnStart: true, browserPath: '', browserDelay: 2, browserTestFirst: true }))
+const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep', genDir: '', genModel: '', genAspect: '3:2', genAutoZip: true, genClearOnStart: true, browserPath: '', browserDelay: 2, browserTestFirst: true, autoUpdate: true }))
 const secretStore = jsonStore<{ aiKeyEnc?: string }>('secrets.json', () => ({}))
 
 /** API key AI, disimpan terenkripsi lewat brankas sistem seperti password FTP. */
@@ -93,6 +93,7 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
   if (typeof patch.browserPath === 'string') next.browserPath = patch.browserPath
   if (patch.browserDelay !== undefined) next.browserDelay = Math.max(0, Math.min(30, Math.round(Number(patch.browserDelay) || 0)))
   if (patch.browserTestFirst !== undefined) next.browserTestFirst = Boolean(patch.browserTestFirst)
+  if (patch.autoUpdate !== undefined) next.autoUpdate = Boolean(patch.autoUpdate)
   await settingsStore.write(next)
   return next
 }

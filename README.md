@@ -66,6 +66,11 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
   ada (wajib untuk Freepik/Magnific, maks 10.000 px), lengkap dengan metadata. Didukung RGB, CMYK, Grayscale,
   Indexed, 8/16 bit; PSD harus disimpan dengan "Maximize PSD Compatibility" aktif (bawaan Photoshop).
 
+- **Pembaruan otomatis:** aplikasi mengecek versi baru saat dibuka dan tiap 6 jam (bisa dimatikan di Pengaturan).
+  Muncul banner "Versi baru tersedia" → Download (dicek SHA-256) → Pasang & buka ulang.
+  Windows: installer berjalan senyap lalu aplikasi terbuka lagi. Mac: aplikasi lama diganti lalu dibuka lagi;
+  kalau dijalankan dari DMG atau folder yang tidak bisa ditulisi, DMG dibuka untuk dipasang manual.
+
 **Versi 1.4.0: Transparan (VFX → PNG transparan)**
 
 - Halaman **Transparan**: seret atau pilih gambar/folder (atau "Jadikan transparan" dari Buat Gambar).
@@ -121,6 +126,36 @@ Saat pertama dibuka akan muncul peringatan karena aplikasi tidak bertanda tangan
 - **Windows:** klik "More info" lalu "Run anyway".
 - **Mac:** klik kanan aplikasi > Open > Open. Kalau tetap diblokir: System Settings > Privacy & Security > Open Anyway.
 
+## Menerbitkan versi baru (pembaruan otomatis)
+
+Kode tetap di repo ini (private). Installer diterbitkan ke repo publik
+[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), tempat aplikasi mengecek
+pembaruan (`latest.json` berisi versi, catatan, ukuran, dan sidik SHA-256 tiap installer).
+
+Persiapan sekali saja:
+
+1. Buat repo **publik** kosong `hadyanbaqi/stock-uploader-releases` (centang "Add a README" supaya tidak kosong).
+2. Buat token: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
+   Repository access: **Only select repositories** → `stock-uploader-releases`.
+   Permissions: **Contents: Read and write**. Simpan tokennya.
+3. Di repo ini: Settings → Secrets and variables → Actions → New repository secret,
+   nama `RELEASES_TOKEN`, isi dengan token tadi.
+
+Setiap rilis:
+
+```bash
+# 1. naikkan "version" di package.json (mis. 1.7.0), commit, push ke main
+# 2. buat tag dengan catatan "Apa yang baru", lalu push tag-nya
+git tag -a v1.7.0 -m "Metadata: dukung PSD + JPG pratinjau Freepik"
+git push origin v1.7.0
+```
+
+Workflow **Rilis** membuat installer Windows + Mac, menjalankan semua tes, lalu menerbitkan rilis `v1.7.0` beserta
+`latest.json`. Tag harus sama dengan versi di package.json. Tag dengan tanda hubung (mis. `v1.7.0-beta.1`)
+diterbitkan sebagai pra-rilis dan tidak ditawarkan ke aplikasi.
+
+Versi pertama yang punya fitur ini harus dipasang manual sekali; setelah itu pembaruan datang sendiri.
+
 ## Untuk pengembang
 
 ```bash
@@ -135,6 +170,7 @@ npm run test:gen     # tes Buat Gambar: Ciora tiruan, nama file, ZIP
 npm run test:alpha   # tes Transparan: alpha, PNG, PSD
 npm run test:profiles # tes Profil Browser: format proxy, flag Chrome, perantara proxy, cek IP
 npm run test:psd     # tes pembaca PSD: mode warna, 16 bit, RLE, PSB, file rusak
+npm run test:update  # tes pembaruan: versi, latest.json, unduh + SHA-256, skrip ganti aplikasi Mac
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)
