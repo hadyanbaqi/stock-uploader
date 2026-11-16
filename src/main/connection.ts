@@ -30,6 +30,7 @@ export function explainError(err: unknown): { message: string; detail: string } 
   else if (code === '530' || text.includes('530') || text.includes('login incorrect') || text.includes('authentication') || e?.level === 'client-authentication') message = 'Username atau password salah, atau akun belum punya akses FTP.'
   else if (text.includes('certificate') || text.includes('self signed') || text.includes('cert_')) message = 'Sertifikat keamanan server tidak valid. Aktifkan "Izinkan sertifikat tidak valid" hanya kalau kamu yakin servernya benar.'
   else if (code === '550' || text.includes('550') || text.includes('no such file')) message = 'Server menolak: folder tujuan tidak ditemukan, atau file/akses tidak diizinkan.'
+  else if (text.includes('permission denied') || code === '3') message = 'Server menolak file ini (izin ditolak). Biasanya jenis file tidak diterima agensi, mis. Freepik tidak menerima PNG lewat FTP (hanya JPG, EPS, PSD).'
   else if (text.includes('tls') || text.includes('ssl') || text.includes('auth tls')) message = 'Server tidak mendukung FTPS. Coba protokol FTP biasa atau SFTP.'
   else if (code === '552' || text.includes('quota') || text.includes('disk full')) message = 'Ruang penyimpanan akun di server penuh.'
   else if (text.includes('ukuran file di server')) message = 'File di server tidak lengkap setelah dikirim.'

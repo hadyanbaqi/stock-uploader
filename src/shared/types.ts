@@ -45,6 +45,8 @@ export type AgencyPreset = {
   loginHint: string
   note?: string
   helpUrl?: string
+  /** Jenis file yang diterima server FTP/SFTP agensi (kosong = semua). File lain dilewati saat masuk antrean. */
+  accepts?: string[]
 }
 
 /** File yang dipilih untuk diupload. */
@@ -96,6 +98,10 @@ export type AddResult = {
   missing: number
   /** Dilewati karena sudah pernah berhasil dikirim ke akun itu. */
   alreadySent: number
+  /** Dilewati karena jenis file tidak diterima agensi akun itu (mis. PNG ke Freepik). */
+  wrongType: number
+  /** Contoh pesan untuk wrongType, mis. "Freepik hanya menerima JPG, EPS, PSD". */
+  wrongTypeNote?: string
 }
 
 export type HistoryEntry = {

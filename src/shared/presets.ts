@@ -50,7 +50,9 @@ export const AGENCY_PRESETS: AgencyPreset[] = [
     host: '',
     port: 21,
     loginHint: 'Host, username, dan password dari dashboard kontributor Freepik',
-    note: 'File di FTP Freepik dihapus otomatis setelah 6 bulan.',
+    note: 'File di FTP Freepik dihapus otomatis setelah 6 bulan. Hanya JPG, EPS (+JPG), dan PSD (+JPG pratinjau); PNG ditolak server.',
+    // Panduan FTP Magnific/Freepik: foto JPG, vektor EPS + JPG bernama sama, PSD + JPG pratinjau.
+    accepts: ['jpg', 'jpeg', 'eps', 'psd'],
     helpUrl: 'https://www.freepik.com/ai/contributors/ftp-upload-method'
   },
   {
@@ -113,4 +115,10 @@ export const ACCOUNT_COLORS = ['#2563eb', '#16a34a', '#dc2626', '#9333ea', '#ea5
 
 export function presetByKey(key: string): AgencyPreset {
   return AGENCY_PRESETS.find((p) => p.key === key) ?? AGENCY_PRESETS[AGENCY_PRESETS.length - 1]
+}
+
+/** Jenis file yang diterima agensi, atau null kalau semua diterima. */
+export function agencyAccepts(agencyKey: string | undefined): { name: string; exts: string[] } | null {
+  const p = AGENCY_PRESETS.find((x) => x.key === agencyKey)
+  return p?.accepts?.length ? { name: p.name, exts: p.accepts } : null
 }

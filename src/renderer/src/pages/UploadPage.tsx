@@ -219,7 +219,7 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
         g.paths.push(f.path)
         groupsByTarget.set(k, g)
       }
-      const r: AddResult = { added: 0, duplicates: 0, sameName: 0, missing: 0, alreadySent: 0 }
+      const r: AddResult = { added: 0, duplicates: 0, sameName: 0, missing: 0, alreadySent: 0, wrongType: 0 }
       for (const g of groupsByTarget.values()) {
         const x = await window.api.queueAdd(g.paths, g.ids, force)
         r.added += x.added
@@ -227,12 +227,15 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
         r.sameName += x.sameName
         r.missing += x.missing
         r.alreadySent += x.alreadySent
+        r.wrongType += x.wrongType
+        r.wrongTypeNote ??= x.wrongTypeNote
       }
       const skipped = [
         r.alreadySent && `${r.alreadySent} sudah pernah dikirim ke akun itu`,
         r.duplicates && `${r.duplicates} sudah ada di antrean`,
         r.sameName && `${r.sameName} punya nama sama dengan file lain ke akun yang sama`,
-        r.missing && `${r.missing} filenya tidak ditemukan`
+        r.missing && `${r.missing} filenya tidak ditemukan`,
+        r.wrongType && `${r.wrongType} jenis filenya tidak diterima (${r.wrongTypeNote})`
       ].filter(Boolean)
       if (!r.added) {
         setError(`Tidak ada yang ditambahkan: ${skipped.join(', ')}.`)
