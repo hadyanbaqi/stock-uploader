@@ -142,30 +142,31 @@ Saat pertama dibuka akan muncul peringatan karena aplikasi tidak bertanda tangan
 
 ## Menerbitkan versi baru (pembaruan otomatis)
 
-Kode tetap di repo ini (private). Installer diterbitkan ke repo publik
-[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), tempat aplikasi mengecek
-pembaruan (`latest.json` berisi versi, catatan, ukuran, dan sidik SHA-256 tiap installer).
+Kode tetap di repo ini (private). **Build, tes, dan rilis berjalan di repo publik**
+[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), karena GitHub Actions
+gratis tanpa batas untuk repo publik (termasuk runner Mac), sedangkan repo private hanya dapat kuota bulanan terbatas.
+Workflow di repo publik mengambil kode dari sini saat build memakai token baca.
 
-Persiapan sekali saja:
+Persiapan sekali saja (di repo publik `stock-uploader-releases`):
 
-1. Buat repo **publik** kosong `hadyanbaqi/stock-uploader-releases` (centang "Add a README" supaya tidak kosong).
-2. Buat token: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
-   Repository access: **Only select repositories** → `stock-uploader-releases`.
-   Permissions: **Contents: Read and write**. Simpan tokennya.
-3. Di repo ini: Settings → Secrets and variables → Actions → New repository secret,
-   nama `RELEASES_TOKEN`, isi dengan token tadi.
+1. Buat token: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
+   Repository access: **Only select repositories** → `stock-uploader` (repo kode ini).
+   Permissions: **Contents: Read-only**. Pilih masa berlaku yang panjang.
+2. Di repo publik: Settings → Secrets and variables → Actions → New repository secret,
+   nama `SOURCE_TOKEN`, isi dengan token tadi.
 
 Setiap rilis:
 
-1. Naikkan `"version"` di package.json (mis. 1.7.0), commit, push ke main.
-2. Buka **Actions → Rilis → Run workflow**, isi catatan "Apa yang baru", klik **Run workflow**.
-   (Atau lewat tag: `git tag -a v1.7.0 -m "catatan" && git push origin v1.7.0`.)
+1. Naikkan `"version"` di package.json (mis. 1.8.0), commit, push ke main.
+2. Di repo publik: **Actions → Build & Rilis → Run workflow**, centang **terbitkan**, isi catatan "Apa yang baru".
 
-Workflow **Rilis** membuat installer Windows + Mac, menjalankan semua tes, lalu menerbitkan rilis `v1.7.0` beserta
-`latest.json`. Versi diambil dari package.json (kalau lewat tag, tag harus sama). Tag dengan tanda hubung (mis. `v1.7.0-beta.1`)
-diterbitkan sebagai pra-rilis dan tidak ditawarkan ke aplikasi.
+Workflow menjalankan semua tes (`npm run ci:test`), membuat installer Windows + Mac, lalu menerbitkan rilis
+beserta `latest.json` (versi, catatan, ukuran, sidik SHA-256). Tanpa centang **terbitkan**, workflow hanya
+membuat installer untuk dicoba (bisa juga dari branch lain, isi kolom branch). Versi dengan tanda hubung
+(mis. `1.8.0-beta.1`) diterbitkan sebagai pra-rilis dan tidak ditawarkan ke aplikasi.
 
-Versi pertama yang punya fitur ini harus dipasang manual sekali; setelah itu pembaruan datang sendiri.
+Catatan: log dan installer di repo publik bisa dilihat orang lain; kode sumbernya tidak.
+Workflow `Build installer` dan `Rilis` di repo private ini masih ada, tetapi hanya manual dan memakai kuota akun.
 
 ## Untuk pengembang
 

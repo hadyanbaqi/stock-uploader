@@ -1,8 +1,8 @@
 name: Build installer
 
+# Build utama sekarang di repo publik hadyanbaqi/stock-uploader-releases (Actions gratis untuk repo publik).
+# Di repo private ini hanya bisa dijalankan manual, supaya kuota menit gratis tidak habis.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
   # Dipanggil oleh release.yml saat menerbitkan versi baru.
   workflow_call:

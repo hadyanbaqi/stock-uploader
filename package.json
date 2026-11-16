@@ -22,6 +22,7 @@
     "test:update": "node scripts/test-update.mts",
     "test:upscale": "node scripts/test-upscale.mts",
     "upscaler": "node scripts/fetch-upscaler.mts",
+    "ci:test": "npm run typecheck && npm run test:conn && npm run test:upload && npm run test:meta && npm run test:csv && npm run test:gen && npm run test:alpha && npm run test:profiles && npm run test:psd && npm run test:update && npm run test:upscale",
     "test:app": "electron-vite build && node scripts/test-app.mts",
     "dist:win": "node scripts/fetch-upscaler.mts win32 && electron-vite build && electron-builder --win --publish never",
     "dist:mac": "node scripts/fetch-upscaler.mts darwin && electron-vite build && electron-builder --mac --publish never"
