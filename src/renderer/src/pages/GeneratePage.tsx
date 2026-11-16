@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GenAction, GenBatch, GenJob, Settings } from '../../../shared/types'
 import { DARK_FX_PROMPTS, GEN_TEMPLATES, VFX_PROMPTS } from '../../../shared/genTemplates'
+import UpscalePanel from '../components/UpscalePanel'
 
 type Props = {
   settings: Settings | null
@@ -405,6 +406,7 @@ export default function GeneratePage({ settings, onSettings, onToMetadata, onToA
             {!more && <div className="muted small gen2-model">{settings.genModel || 'Model belum dipilih'}</div>}
           </>
         )}
+        {settings && <UpscalePanel settings={settings} save={save} />}
         {modelError && <div className="small danger-text">{modelError}</div>}
         {models?.length === 0 && !modelError && <div className="small danger-text">Akun Ciora ini tidak menyediakan model pembuat gambar.</div>}
 
@@ -658,7 +660,18 @@ function Card({
           <input type="checkbox" checked={picked} onChange={onPick} />
         </label>
         <span className="gc-num">#{n}</span>
+        {j.upscale !== undefined && (
+          <div className="gc-up">
+            <span className="gc-spin" />
+            <span>Upscale AI {Math.round(j.upscale * 100)}%</span>
+          </div>
+        )}
         {j.status === 'saved' && <span className="gen-badge gc-saved">✓</span>}
+        {j.status === 'saved' && j.upscaled && (
+          <span className="gen-badge gc-up-badge" title="Sudah di-upscale AI">
+            {j.upscaled}
+          </span>
+        )}
         <div className="gc-actions">
           {j.status === 'ready' && (
             <>

@@ -34,6 +34,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Simpan cache upscaler
+        uses: actions/cache@v4
+        with:
+          path: resources/upscaler
+          key: upscaler-${{ runner.os }}-${{ hashFiles('scripts/fetch-upscaler.mts') }}
+
+      - name: Unduh upscaler Real-ESRGAN (SHA-256 dikunci)
+        run: node scripts/fetch-upscaler.mts
+
       - name: Cek tipe kode
         run: npm run typecheck
 
@@ -64,6 +73,9 @@ jobs:
       - name: Tes pembaruan aplikasi (versi, unduh + SHA-256, skrip ganti aplikasi Mac)
         run: npm run test:update
 
+      - name: Tes upscale AI (rencana ukuran, flag, progres, pesan error, program tiruan + asli)
+        run: npm run test:upscale
+
       - name: Tes aplikasi asli (upload, riwayat, metadata)
         timeout-minutes: 10
         run: npm run test:app
@@ -71,6 +83,11 @@ jobs:
 
       - name: Buat installer
         run: npm run ${{ matrix.dist }}
+
+      - name: Cek upscaler di dalam installer (file, tanda tangan, bisa dijalankan)
+        run: node scripts/check-upscaler.mts
+        env:
+          APP: ${{ github.workspace }}/${{ matrix.app }}
 
       - name: Tes aplikasi hasil installer
         # Mac bertanda tangan ad-hoc bisa menunggu izin Keychain yang tidak bisa diklik di CI.

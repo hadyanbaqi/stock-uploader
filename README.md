@@ -46,6 +46,20 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
 
+**Versi 1.7.0: Upscale AI di Buat Gambar**
+
+- Sakelar **Upscale AI saat disimpan** di Buat Gambar: hasil generate langsung diperbesar dengan Real-ESRGAN
+  (mesin yang sama dengan Upscayl) di komputer sendiri, tanpa internet dan tanpa biaya.
+- Pilih **model** (Foto & umum / Ilustrasi & anime / Cepat), **skala** 2×, 3×, 4×, dan **format** JPG, PNG, atau WebP.
+  JPG: latar transparan jadi putih; PNG/WebP: transparansi tetap. Hasil dibatasi 64 MP.
+- **Peringatan** saat pertama kali dinyalakan: berjalan di kartu grafis komputer ini (bisa panas/lambat,
+  ±5–60 detik per gambar, Windows perlu driver Vulkan terbaru). Progres "Upscale AI xx%" tampil di kartu.
+- Kalau upscale gagal (mis. kartu grafis tidak didukung), gambar tetap disimpan seperti biasa dan ada pesan alasannya.
+- Windows: `realesrgan-ncnn-vulkan.exe` + `vcomp140.dll`; Mac: binary native Apple Silicon (ditandatangani ad-hoc).
+  Diunduh saat build dari rilis resmi xinntao/Real-ESRGAN v0.2.5.0 dengan SHA-256 dikunci (`npm run upscaler`).
+  Lisensi MIT (program) + BSD-3 (model) disertakan di `upscaler/LISENSI-UPSCALER.txt`.
+  Upscayl sendiri (AGPL-3.0) sengaja tidak dipakai supaya kode aplikasi ini tidak wajib dibuka.
+
 **Versi 1.6.0: Profil Browser**
 
 - Halaman **Profil Browser**: satu profil = satu Chrome terpisah (login, cookie, riwayat, ekstensi sendiri), jadi
@@ -168,6 +182,9 @@ npm run test:alpha   # tes Transparan: alpha, PNG, PSD
 npm run test:profiles # tes Profil Browser: format proxy, flag Chrome, perantara proxy, cek IP
 npm run test:psd     # tes pembaca PSD: mode warna, 16 bit, RLE, PSB, file rusak
 npm run test:update  # tes pembaruan: versi, latest.json, unduh + SHA-256, skrip ganti aplikasi Mac
+npm run upscaler     # unduh Real-ESRGAN untuk komputer ini ke resources/upscaler (sekali saja)
+npm run test:upscale # tes upscale: ukuran, flag, progres, error; Real-ESRGAN asli kalau ada GPU
+                     # (tanpa GPU: VK_ICD_FILENAMES=…/vk_swiftshader_icd.json untuk Vulkan di CPU)
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

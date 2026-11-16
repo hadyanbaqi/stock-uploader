@@ -9,6 +9,7 @@ import { imageThumb, saveStockJpeg } from './frames'
 import { extFor, generateImage, RefusedError } from './imagegen'
 import { updateMeta } from './metadata'
 import { getAiKey, getSettings } from './store'
+import { upscaleImage } from './upscaler'
 import { writeZip } from './zip'
 
 /**
@@ -54,7 +55,10 @@ export class GenQueue {
     } catch {
       this.data = { jobs: [], batches: [] }
     }
-    for (const j of this.data.jobs) if (j.status === 'running') j.status = 'queued'
+    for (const j of this.data.jobs) {
+      if (j.status === 'running') j.status = 'queued'
+      j.upscale = undefined
+    }
     await fs.mkdir(dir(), { recursive: true })
     this.pump()
   }
@@ -215,20 +219,52 @@ export class GenQueue {
 
   private async keep(jobs: Stored[]): Promise<number> {
     let saved = 0
+    const up = (await getSettings()).genUpscale
+    let upscaleError = ''
+    let upscaled = 0
     for (const j of jobs) {
       if (j.status !== 'ready' || !j.raw) continue
       const b = this.data.batches.find((x) => x.id === j.batchId)
       const folder = path.join(await this.outDir(), b?.folder ?? 'gen')
       await fs.mkdir(folder, { recursive: true })
-      let dest = ''
-      for (let n = 1; ; n++) {
-        dest = path.join(folder, `${fileBase(j.prompt, n)}.jpg`)
-        if (!existsSync(dest)) break
+      const freeName = (ext: string) => {
+        for (let n = 1; ; n++) {
+          const d = path.join(folder, `${fileBase(j.prompt, n)}.${ext}`)
+          if (!existsSync(d)) return d
+        }
       }
       try {
-        const r = await saveStockJpeg(j.raw, dest)
-        j.width = r.width
-        j.height = r.height
+        let dest = ''
+        let aiScale = ''
+        if (up?.enabled) {
+          // Upscale AI di komputer ini; kalau gagal, tetap disimpan seperti biasa (JPG ≥ 4 MP).
+          dest = freeName(up.format)
+          j.upscale = 0
+          this.changed()
+          try {
+            const r = await upscaleImage(j.raw, dest, up, (p) => {
+              j.upscale = p
+              this.changed()
+            })
+            j.width = r.width
+            j.height = r.height
+            aiScale = r.capped ? 'maks' : `${up.scale}×`
+            upscaled++
+          } catch (err) {
+            await fs.rm(dest, { force: true })
+            upscaleError ||= (err as Error).message
+            dest = ''
+          } finally {
+            j.upscale = undefined
+          }
+        }
+        if (!dest) {
+          dest = freeName('jpg')
+          const r = await saveStockJpeg(j.raw, dest)
+          j.width = r.width
+          j.height = r.height
+        }
+        j.upscaled = aiScale || undefined
         j.savedPath = dest
         j.status = 'saved'
         await this.dropRaw(j)
@@ -239,6 +275,9 @@ export class GenQueue {
         j.error = `Gagal menyimpan: ${(err as Error).message}`
       }
       this.changed()
+    }
+    if (upscaleError) {
+      this.notify(`Upscale AI gagal${upscaled ? ` untuk sebagian gambar (${upscaled} berhasil)` : ''}: ${upscaleError} Gambar tetap disimpan tanpa upscale AI.`)
     }
     return saved
   }
