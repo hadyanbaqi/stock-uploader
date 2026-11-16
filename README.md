@@ -142,31 +142,28 @@ Saat pertama dibuka akan muncul peringatan karena aplikasi tidak bertanda tangan
 
 ## Menerbitkan versi baru (pembaruan otomatis)
 
-Kode tetap di repo ini (private). **Build, tes, dan rilis berjalan di repo publik**
-[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), karena GitHub Actions
-gratis tanpa batas untuk repo publik (termasuk runner Mac), sedangkan repo private hanya dapat kuota bulanan terbatas.
-Workflow di repo publik mengambil kode dari sini saat build memakai token baca.
+Repo kode ini publik, jadi GitHub Actions gratis tanpa kuota (termasuk runner Mac). Setiap push ke main dan
+setiap pull request otomatis dites dan dibuatkan installer (workflow **Build installer**).
 
-Persiapan sekali saja (di repo publik `stock-uploader-releases`):
-
-1. Buat token: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
-   Repository access: **Only select repositories** → `stock-uploader` (repo kode ini).
-   Permissions: **Contents: Read-only**. Pilih masa berlaku yang panjang.
-2. Di repo publik: Settings → Secrets and variables → Actions → New repository secret,
-   nama `SOURCE_TOKEN`, isi dengan token tadi.
+Installer untuk pembaruan otomatis diterbitkan di repo publik
+[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), tempat aplikasi
+mengecek `latest.json` (versi, catatan, ukuran, sidik SHA-256 tiap installer).
 
 Setiap rilis:
 
 1. Naikkan `"version"` di package.json (mis. 1.8.0), commit, push ke main.
-2. Di repo publik: **Actions → Build & Rilis → Run workflow**, centang **terbitkan**, isi catatan "Apa yang baru".
+2. Di repo **stock-uploader-releases**: **Actions → Build & Rilis → Run workflow**, centang **terbitkan**,
+   isi catatan "Apa yang baru". (Tanpa token: kode diambil langsung dari repo publik ini.)
 
 Workflow menjalankan semua tes (`npm run ci:test`), membuat installer Windows + Mac, lalu menerbitkan rilis
-beserta `latest.json` (versi, catatan, ukuran, sidik SHA-256). Tanpa centang **terbitkan**, workflow hanya
-membuat installer untuk dicoba (bisa juga dari branch lain, isi kolom branch). Versi dengan tanda hubung
-(mis. `1.8.0-beta.1`) diterbitkan sebagai pra-rilis dan tidak ditawarkan ke aplikasi.
+beserta `latest.json`. Tanpa centang **terbitkan**, workflow hanya membuat installer untuk dicoba (bisa juga dari
+branch lain). Versi dengan tanda hubung (mis. `1.8.0-beta.1`) jadi pra-rilis dan tidak ditawarkan ke aplikasi.
 
-Catatan: log dan installer di repo publik bisa dilihat orang lain; kode sumbernya tidak.
-Workflow `Build installer` dan `Rilis` di repo private ini masih ada, tetapi hanya manual dan memakai kuota akun.
+Cara lama tetap ada: **Actions → Rilis → Run workflow** di repo ini (butuh secret `RELEASES_TOKEN`,
+token "Contents: Read and write" untuk repo stock-uploader-releases).
+
+Kalau repo ini dijadikan private lagi, isi secret `SOURCE_TOKEN` (token "Contents: Read-only" untuk repo ini)
+di repo stock-uploader-releases, dan ingat repo private hanya punya kuota menit bulanan.
 
 ## Untuk pengembang
 
