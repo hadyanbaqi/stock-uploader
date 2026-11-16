@@ -119,6 +119,7 @@ const api: Api = {
     return () => ipcRenderer.removeListener('profiles:changed', listener)
   },
 
+  upscaleInfo: () => ipcRenderer.invoke('upscale:info'),
   updateState: () => ipcRenderer.invoke('update:state'),
   updateCheck: () => ipcRenderer.invoke('update:check'),
   updateDownload: () => ipcRenderer.invoke('update:download'),

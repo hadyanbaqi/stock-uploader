@@ -31,7 +31,8 @@ function dosTime(d: Date): { time: number; date: number } {
 }
 
 /** Tulis ZIP berisi `files` (path di disk). Nama di dalam ZIP = nama file (dobel diberi akhiran). */
-export async function writeZip(zipPath: string, files: string[]): Promise<{ count: number; bytes: number }> {
+/** `root`: kalau diisi, nama di dalam ZIP memakai folder relatif terhadap root (mis. "FREEPIK/efek.psd"). */
+export async function writeZip(zipPath: string, files: string[], root?: string): Promise<{ count: number; bytes: number }> {
   const tmp = `${zipPath}.tmp`
   const fh = await fs.open(tmp, 'w')
   const central: Buffer[] = []
@@ -41,9 +42,11 @@ export async function writeZip(zipPath: string, files: string[]): Promise<{ coun
     for (const f of files) {
       const data = await fs.readFile(f)
       const st = await fs.stat(f)
-      let name = path.basename(f)
-      const ext = path.extname(name)
-      for (let i = 2; used.has(name.toLowerCase()); i++) name = `${path.basename(f, ext)}-${i}${ext}`
+      const rel = root ? path.relative(root, f).split(path.sep).join('/') : ''
+      const base = rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel : path.basename(f)
+      let name = base
+      const ext = path.extname(base)
+      for (let i = 2; used.has(name.toLowerCase()); i++) name = `${base.slice(0, base.length - ext.length)}-${i}${ext}`
       used.add(name.toLowerCase())
       const nameBuf = Buffer.from(name, 'utf8')
       const crc = crc32(data)

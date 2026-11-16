@@ -6,6 +6,11 @@ import { inflateSync } from 'node:zlib'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { readPsdComposite } from '../src/main/psd.ts'
+import { writeZip } from '../src/main/zip.ts'
+import { ALPHA_AGENCIES, ALPHA_AGENCY_ORDER, agencyScale, planAgencyFiles, skippedForAi } from '../src/shared/alphaAgency.ts'
+import { agencyFromPath } from '../src/shared/agencyFolder.ts'
+import { readFileSync } from 'node:fs'
 import { composite, detectBackground, downscale, encodePng, encodePsd, extractAlpha, packBits } from '../src/main/alpha.ts'
 
 let failed = 0
@@ -106,6 +111,38 @@ const pb = packBits(Uint8Array.from([1, 1, 1, 1, 2, 3, 4, 4]))
 check('PackBits', pb.toString('hex') === 'fd01010203ff04', pb.toString('hex'))
 const psd = encodePsd(blk, W, H, [0, 0, 0])
 check('tanda PSD, 3 kanal, RGB', psd.subarray(0, 4).toString() === '8BPS' && psd.readUInt16BE(12) === 3 && psd.readUInt16BE(24) === 3)
+
+console.log('[Paket per agensi]')
+const plan = planAgencyFiles('api-biru', ['shutterstock', 'freepik', 'adobe'])
+check(
+  'Freepik: PSD + JPG nama sama, PSD file utama',
+  plan.some((f) => f.rel === 'FREEPIK/api-biru.psd' && f.main) && plan.some((f) => f.rel === 'FREEPIK/api-biru.jpg' && !f.main)
+)
+check('Shutterstock: hanya JPG (bukan PNG/PSD/EPS)', plan.filter((f) => f.agency === 'shutterstock').map((f) => f.kind).join() === 'jpg')
+check('Adobe: PNG transparan', plan.filter((f) => f.agency === 'adobe').map((f) => f.kind).join() === 'png')
+check('urutan tetap (Adobe dulu), apa pun urutan pilihan', plan[0].agency === 'adobe')
+check(
+  'semua folder dikenali agencyFromPath (upload otomatis ke agensi yang benar)',
+  ALPHA_AGENCY_ORDER.every((a) => agencyFromPath(`/x/out/${ALPHA_AGENCIES[a].folder}/f.jpg`)?.agency === a)
+)
+check('1024×1024 + Adobe → diperbesar ≥ 4 MP', 1024 * 1024 * agencyScale(1024, 1024, ['adobe']) ** 2 >= 4_000_000)
+check('1024×1024 + 123RF → ≥ 6 MP', 1024 * 1024 * agencyScale(1024, 1024, ['123rf', 'adobe']) ** 2 >= 6_000_000)
+check('1500×1000 + Freepik → sisi terpanjang ≥ 2.000 px', Math.round(1500 * agencyScale(1500, 1000, ['freepik'])) >= 2000)
+check('sudah besar → tidak diubah', agencyScale(6000, 4000, ['adobe', '123rf', 'freepik']) === 1)
+check('tanpa agensi → 1', agencyScale(500, 500, []) === 1)
+check('gambar AI: Shutterstock, Pond5, Alamy dilewati', skippedForAi(['adobe', 'shutterstock', 'pond5', 'alamy', 'freepik'], true).join() === 'shutterstock,pond5,alamy')
+check('gambar bukan AI: tidak ada yang dilewati', skippedForAi(['shutterstock'], false).length === 0)
+const comp = readPsdComposite(encodePsd(blk, W, H, [0, 0, 0]), 10000)
+check('pratinjau Freepik dari PSD: ukuran sama, latar ikut (tidak transparan)', comp.width === W && comp.height === H && comp.rgba[3] === 255)
+const zdir = mkdtempSync(path.join(tmpdir(), 'su-alpha-zip-'))
+const { mkdirSync } = await import('node:fs')
+for (const f of ['FREEPIK/a.jpg', 'SHUTTERSTOCK/a.jpg', 'FREEPIK/a.psd']) {
+  mkdirSync(path.join(zdir, path.dirname(f)), { recursive: true })
+  writeFileSync(path.join(zdir, f), f)
+}
+await writeZip(`${zdir}.zip`, ['FREEPIK/a.jpg', 'SHUTTERSTOCK/a.jpg', 'FREEPIK/a.psd'].map((f) => path.join(zdir, f)), zdir)
+const zbuf = readFileSync(`${zdir}.zip`).toString('latin1')
+check('ZIP menyimpan folder agensi (a.jpg Freepik dan Shutterstock tidak bertabrakan)', zbuf.includes('FREEPIK/a.jpg') && zbuf.includes('SHUTTERSTOCK/a.jpg') && !zbuf.includes('a-2.jpg'))
 
 const out = process.argv[2] || mkdtempSync(path.join(tmpdir(), 'su-alpha-'))
 writeFileSync(path.join(out, 'uji.png'), png)

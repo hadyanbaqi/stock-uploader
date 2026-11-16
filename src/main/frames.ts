@@ -61,6 +61,26 @@ window.stockJpeg = async (url, minPx, targetPx, q) => {
   g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h)
   return { data: c.toDataURL('image/jpeg', q), width: w, height: h, srcWidth: w0, srcHeight: h0 }
 }
+// Ukuran asli gambar (JPG/PNG/WebP).
+window.imageSize = async (url) => {
+  const img = new Image(); img.src = url
+  await img.decode()
+  return { width: img.naturalWidth, height: img.naturalHeight }
+}
+// Simpan gambar ke ukuran tertentu: jpg (latar putih), png/webp (transparansi tetap).
+window.encodeScaled = async (url, w, h, fmt, q) => {
+  const img = new Image(); img.src = url
+  await img.decode()
+  const c = document.createElement('canvas'); c.width = w; c.height = h
+  const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'
+  if (fmt === 'jpg') { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h) }
+  g.drawImage(img, 0, 0, w, h)
+  const mime = fmt === 'jpg' ? 'image/jpeg' : fmt === 'webp' ? 'image/webp' : 'image/png'
+  const blob = await new Promise((res) => c.toBlob(res, mime, q))
+  if (!blob) throw new Error('encode')
+  c.width = 1; c.height = 1
+  return await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error('encode')); r.readAsDataURL(blob) })
+}
 // JPG preview dari PNG transparan: latar hitam/putih/petak/belah/warna + teks opsional.
 window.previewJpeg = async (url, style, color, text, q) => {
   const img = new Image(); img.src = url
@@ -288,6 +308,21 @@ export async function saveStockJpeg(src: string, dest: string): Promise<{ width:
   )
   await fs.writeFile(dest, Buffer.from(r.data.split(',')[1], 'base64'))
   return { width: r.width, height: r.height, upscaled: r.width !== r.srcWidth }
+}
+
+/** Ukuran asli gambar. */
+export async function imageSize(src: string): Promise<{ width: number; height: number }> {
+  return run<{ width: number; height: number }>(`imageSize(${JSON.stringify(pathToFileURL(src).href)})`)
+}
+
+/** Simpan gambar ke ukuran dan format tertentu (dipakai setelah upscale). */
+export async function encodeScaled(src: string, dest: string, width: number, height: number, format: 'jpg' | 'png' | 'webp'): Promise<void> {
+  const url = await run<string>(
+    `encodeScaled(${JSON.stringify(pathToFileURL(src).href)}, ${width}, ${height}, ${JSON.stringify(format)}, ${format === 'png' ? 'undefined' : 0.95})`
+  )
+  const data = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64')
+  if (!data.length) throw new Error('Hasil upscale kosong.')
+  await fs.writeFile(dest, data)
 }
 
 /** JPG preview dari PNG transparan (lihat previewJpeg di jendela pembantu). */

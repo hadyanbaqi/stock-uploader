@@ -77,7 +77,8 @@ const accounts: Record<string, ResolvedAccount & { root: string }> = {
   ftp: { name: 'Uji FTP', color: '#2563eb', root: ftp.root, target: { ...base, protocol: 'ftp', port: 2131 } },
   ftps: { name: 'Uji FTPS', color: '#16a34a', root: ftps.root, target: { ...base, protocol: 'ftps', port: 2331, allowInvalidCert: true } },
   sftp: { name: 'Uji SFTP', color: '#9333ea', root: sftp.root, target: { ...base, protocol: 'sftp', port: 2232 } },
-  salah: { name: 'Uji password salah', color: '#dc2626', root: ftp.root, target: { ...base, protocol: 'ftp', port: 2131, password: 'salah' } }
+  salah: { name: 'Uji password salah', color: '#dc2626', root: ftp.root, target: { ...base, protocol: 'ftp', port: 2131, password: 'salah' } },
+  freepik: { name: 'Uji Freepik', color: '#0ea5e9', agency: 'freepik', root: sftp.root, target: { ...base, protocol: 'sftp', port: 2232 } }
 }
 
 // Kait untuk tes: dipanggil setiap ada kemajuan upload.
@@ -244,6 +245,21 @@ await h3.init()
 check('hapus dari riwayat = boleh dikirim lagi', !h3.wasSent('ftps', one.fileName, one.size) && h3.list().length === h2.list().length)
 const csv = historyCsv(h3.list())
 check('ekspor CSV riwayat', csv.split('\r\n').length === h3.list().length + 2 && csv.includes('Berhasil'))
+
+// 6b. jenis file per agensi (Freepik menolak PNG lewat FTP → "permission denied")
+console.log('\n[6b] Jenis file yang tidak diterima agensi dilewati')
+{
+  const png = path.join(work, 'transparan-uji.png')
+  const jpg = path.join(work, 'transparan-uji.jpg')
+  writeFileSync(png, 'png')
+  writeFileSync(jpg, 'jpg')
+  const r = await q.add([png, jpg], ['freepik', 'ftp'])
+  check('PNG ke Freepik dilewati, JPG ke Freepik + keduanya ke FTP biasa masuk', r.wrongType === 1 && r.added === 3, JSON.stringify(r))
+  check('pesan menyebut format yang diterima', /Freepik hanya menerima JPG, EPS, PSD/.test(r.wrongTypeNote ?? ''), r.wrongTypeNote)
+  const { explainError } = await import('../src/main/connection.ts')
+  check('error SFTP "permission denied" dijelaskan (bukan "Koneksi gagal")', /jenis file tidak diterima/.test(explainError(Object.assign(new Error('fastPut: permission denied Local: /a.png'), { code: 3 })).message))
+  await waitFor(q, (ts) => ts.every(finished), 60_000)
+}
 
 // 7. file besar
 if (BIG) {

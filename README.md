@@ -46,6 +46,20 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
 
+**Versi 1.7.0: Upscale AI di Buat Gambar**
+
+- Sakelar **Upscale AI saat disimpan** di Buat Gambar: hasil generate langsung diperbesar dengan Real-ESRGAN
+  (mesin yang sama dengan Upscayl) di komputer sendiri, tanpa internet dan tanpa biaya.
+- Pilih **model** (Foto & umum / Ilustrasi & anime / Cepat), **skala** 2×, 3×, 4×, dan **format** JPG, PNG, atau WebP.
+  JPG: latar transparan jadi putih; PNG/WebP: transparansi tetap. Hasil dibatasi 64 MP.
+- **Peringatan** saat pertama kali dinyalakan: berjalan di kartu grafis komputer ini (bisa panas/lambat,
+  ±5–60 detik per gambar, Windows perlu driver Vulkan terbaru). Progres "Upscale AI xx%" tampil di kartu.
+- Kalau upscale gagal (mis. kartu grafis tidak didukung), gambar tetap disimpan seperti biasa dan ada pesan alasannya.
+- Windows: `realesrgan-ncnn-vulkan.exe` + `vcomp140.dll`; Mac: binary native Apple Silicon (ditandatangani ad-hoc).
+  Diunduh saat build dari rilis resmi xinntao/Real-ESRGAN v0.2.5.0 dengan SHA-256 dikunci (`npm run upscaler`).
+  Lisensi MIT (program) + BSD-3 (model) disertakan di `upscaler/LISENSI-UPSCALER.txt`.
+  Upscayl sendiri (AGPL-3.0) sengaja tidak dipakai supaya kode aplikasi ini tidak wajib dibuka.
+
 **Versi 1.6.0: Profil Browser**
 
 - Halaman **Profil Browser**: satu profil = satu Chrome terpisah (login, cookie, riwayat, ekstensi sendiri), jadi
@@ -70,6 +84,24 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
   Muncul banner "Versi baru tersedia" → Download (dicek SHA-256) → Pasang & buka ulang.
   Windows: installer berjalan senyap lalu aplikasi terbuka lagi. Mac: aplikasi lama diganti lalu dibuka lagi;
   kalau dijalankan dari DMG atau folder yang tidak bisa ditulisi, DMG dibuka untuk dipasang manual.
+
+**Versi 1.7.0: Transparan → paket per agensi**
+
+Centang agensi di Transparan → tiap agensi dapat folder sendiri (nama folder sama dengan upload otomatis):
+
+| Folder | File | Syarat (dicek Nov 2026) |
+| --- | --- | --- |
+| `ADOBE-STOCK/` | PNG transparan | 4–100 MP, ≤ 45 MB, sRGB; PNG lewat portal web |
+| `SHUTTERSTOCK/` | JPG (efek di latar aslinya) | ≥ 4 MP sRGB. PNG/PSD ditolak; EPS hanya vektor asli. Tidak menerima AI |
+| `FREEPIK/` | `nama.psd` + `nama.jpg` | PSD 1,5–250 MB; JPG 2.000–10.000 px, nama sama |
+| `VECTEEZY/` | PNG transparan | ≥ 4 MP, ≤ 50 MB |
+| `POND5/` | PNG transparan | ≥ 2.000 px. Tidak menerima AI |
+| `123RF/` | JPG | ≥ 6 MP, ≤ 30 MB |
+| `DREAMSTIME/`, `DEPOSITPHOTOS/` | JPG | ≥ 3 / 4 MP |
+| `ALAMY/` | JPG | ≥ 17 MB tanpa kompresi (±6 MP). Tidak menerima AI |
+
+Gambar diperbesar otomatis sampai memenuhi semua agensi terpilih. Gambar AI (dari Buat Gambar atau dicentang
+"buatan AI") dilewati untuk agensi yang menolak AI. ZIP menyimpan folder agensinya.
 
 **Versi 1.4.0: Transparan (VFX → PNG transparan)**
 
@@ -128,30 +160,28 @@ Saat pertama dibuka akan muncul peringatan karena aplikasi tidak bertanda tangan
 
 ## Menerbitkan versi baru (pembaruan otomatis)
 
-Kode tetap di repo ini (private). Installer diterbitkan ke repo publik
-[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), tempat aplikasi mengecek
-pembaruan (`latest.json` berisi versi, catatan, ukuran, dan sidik SHA-256 tiap installer).
+Repo kode ini publik, jadi GitHub Actions gratis tanpa kuota (termasuk runner Mac). Setiap push ke main dan
+setiap pull request otomatis dites dan dibuatkan installer (workflow **Build installer**).
 
-Persiapan sekali saja:
-
-1. Buat repo **publik** kosong `hadyanbaqi/stock-uploader-releases` (centang "Add a README" supaya tidak kosong).
-2. Buat token: GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token.
-   Repository access: **Only select repositories** → `stock-uploader-releases`.
-   Permissions: **Contents: Read and write**. Simpan tokennya.
-3. Di repo ini: Settings → Secrets and variables → Actions → New repository secret,
-   nama `RELEASES_TOKEN`, isi dengan token tadi.
+Installer untuk pembaruan otomatis diterbitkan di repo publik
+[hadyanbaqi/stock-uploader-releases](https://github.com/hadyanbaqi/stock-uploader-releases), tempat aplikasi
+mengecek `latest.json` (versi, catatan, ukuran, sidik SHA-256 tiap installer).
 
 Setiap rilis:
 
-1. Naikkan `"version"` di package.json (mis. 1.7.0), commit, push ke main.
-2. Buka **Actions → Rilis → Run workflow**, isi catatan "Apa yang baru", klik **Run workflow**.
-   (Atau lewat tag: `git tag -a v1.7.0 -m "catatan" && git push origin v1.7.0`.)
+1. Naikkan `"version"` di package.json (mis. 1.8.0), commit, push ke main.
+2. Di repo **stock-uploader-releases**: **Actions → Build & Rilis → Run workflow**, centang **terbitkan**,
+   isi catatan "Apa yang baru". (Tanpa token: kode diambil langsung dari repo publik ini.)
 
-Workflow **Rilis** membuat installer Windows + Mac, menjalankan semua tes, lalu menerbitkan rilis `v1.7.0` beserta
-`latest.json`. Versi diambil dari package.json (kalau lewat tag, tag harus sama). Tag dengan tanda hubung (mis. `v1.7.0-beta.1`)
-diterbitkan sebagai pra-rilis dan tidak ditawarkan ke aplikasi.
+Workflow menjalankan semua tes (`npm run ci:test`), membuat installer Windows + Mac, lalu menerbitkan rilis
+beserta `latest.json`. Tanpa centang **terbitkan**, workflow hanya membuat installer untuk dicoba (bisa juga dari
+branch lain). Versi dengan tanda hubung (mis. `1.8.0-beta.1`) jadi pra-rilis dan tidak ditawarkan ke aplikasi.
 
-Versi pertama yang punya fitur ini harus dipasang manual sekali; setelah itu pembaruan datang sendiri.
+Cara lama tetap ada: **Actions → Rilis → Run workflow** di repo ini (butuh secret `RELEASES_TOKEN`,
+token "Contents: Read and write" untuk repo stock-uploader-releases).
+
+Kalau repo ini dijadikan private lagi, isi secret `SOURCE_TOKEN` (token "Contents: Read-only" untuk repo ini)
+di repo stock-uploader-releases, dan ingat repo private hanya punya kuota menit bulanan.
 
 ## Untuk pengembang
 
@@ -168,6 +198,9 @@ npm run test:alpha   # tes Transparan: alpha, PNG, PSD
 npm run test:profiles # tes Profil Browser: format proxy, flag Chrome, perantara proxy, cek IP
 npm run test:psd     # tes pembaca PSD: mode warna, 16 bit, RLE, PSB, file rusak
 npm run test:update  # tes pembaruan: versi, latest.json, unduh + SHA-256, skrip ganti aplikasi Mac
+npm run upscaler     # unduh Real-ESRGAN untuk komputer ini ke resources/upscaler (sekali saja)
+npm run test:upscale # tes upscale: ukuran, flag, progres, error; Real-ESRGAN asli kalau ada GPU
+                     # (tanpa GPU: VK_ICD_FILENAMES=…/vk_swiftshader_icd.json untuk Vulkan di CPU)
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

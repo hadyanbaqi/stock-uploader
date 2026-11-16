@@ -5,6 +5,7 @@ import type { AddResult, QueueAction, QueueTask } from '../shared/types'
 import type { ConnectionTarget } from './connection.ts'
 import { explainError } from './connection.ts'
 import { isPermanent, uploadFile, type UploadOptions, type UploadOutcome } from './transfer.ts'
+import { agencyAccepts } from '../shared/presets.ts'
 
 export type ResolvedAccount = { name: string; color: string; agency?: string; target: ConnectionTarget }
 
@@ -83,7 +84,7 @@ export class UploadQueue {
   }
 
   async add(paths: string[], accountIds: string[], force = false): Promise<AddResult> {
-    const result: AddResult = { added: 0, duplicates: 0, sameName: 0, missing: 0, alreadySent: 0 }
+    const result: AddResult = { added: 0, duplicates: 0, sameName: 0, missing: 0, alreadySent: 0, wrongType: 0 }
     const accounts = new Map<string, ResolvedAccount>()
     for (const id of new Set(accountIds)) {
       const acc = await this.deps.resolve(id)
@@ -101,7 +102,15 @@ export class UploadQueue {
         continue
       }
       const fileName = path.basename(filePath)
+      const ext = path.extname(fileName).slice(1).toLowerCase()
       for (const [accountId, acc] of accounts) {
+        // Server agensi menolak jenis file ini (mis. PNG ke Freepik → "permission denied"); jangan dikirim.
+        const rule = agencyAccepts(acc.agency)
+        if (rule && !rule.exts.includes(ext)) {
+          result.wrongType++
+          result.wrongTypeNote ??= `${rule.name} hanya menerima ${rule.exts.filter((x) => x !== 'jpeg').map((x) => x.toUpperCase()).join(', ')} lewat FTP`
+          continue
+        }
         if (!force && this.deps.wasSent?.(accountId, fileName, size)) {
           result.alreadySent++
           continue

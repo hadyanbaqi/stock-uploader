@@ -1,5 +1,7 @@
+import type { AlphaAgency } from './alphaAgency'
 import type { AiMode, FileMeta, MetaRecord } from './metadata'
 import type { UpdateState } from './update'
+import type { UpscaleOptions } from './upscale'
 import type { BrowserProfile, IpStatus, OpenResult, ProfileGroup, ProfileInput, ProfilesState } from './profiles'
 
 export type Protocol = 'ftp' | 'ftps' | 'sftp'
@@ -44,6 +46,8 @@ export type AgencyPreset = {
   loginHint: string
   note?: string
   helpUrl?: string
+  /** Jenis file yang diterima server FTP/SFTP agensi (kosong = semua). File lain dilewati saat masuk antrean. */
+  accepts?: string[]
 }
 
 /** File yang dipilih untuk diupload. */
@@ -95,6 +99,10 @@ export type AddResult = {
   missing: number
   /** Dilewati karena sudah pernah berhasil dikirim ke akun itu. */
   alreadySent: number
+  /** Dilewati karena jenis file tidak diterima agensi akun itu (mis. PNG ke Freepik). */
+  wrongType: number
+  /** Contoh pesan untuk wrongType, mis. "Freepik hanya menerima JPG, EPS, PSD". */
+  wrongTypeNote?: string
 }
 
 export type HistoryEntry = {
@@ -138,6 +146,10 @@ export type Settings = {
   browserTestFirst: boolean
   /** Cek pembaruan aplikasi otomatis saat dibuka dan tiap 6 jam. */
   autoUpdate: boolean
+  /** Upscale AI otomatis saat hasil Buat Gambar disimpan. */
+  genUpscale: UpscaleOptions
+  /** Peringatan "berjalan di komputer ini" sudah dibaca. */
+  upscaleWarned: boolean
 }
 
 export type GenStatus = 'queued' | 'running' | 'ready' | 'saved' | 'discarded' | 'failed' | 'rejected' | 'canceled'
@@ -162,6 +174,10 @@ export type GenJob = {
   width?: number
   height?: number
   savedPath?: string
+  /** 0..1 saat sedang di-upscale AI di komputer ini. */
+  upscale?: number
+  /** Skala upscale AI yang sudah dipakai, mis. "4×". */
+  upscaled?: string
 }
 
 export type GenBatch = { id: string; folder: string; autoZip: boolean; zipPath?: string; createdAt: number; refName?: string; /** Disembunyikan dari galeri (tetap ada di Riwayat). */ hidden?: boolean }
@@ -201,10 +217,25 @@ export type AlphaOptions = {
   /** '' = folder "transparan-<waktu>" di sebelah file pertama. */
   outDir: string
   zip: boolean
+  /** Paket per agensi: tiap agensi dapat folder sendiri dengan jenis file yang diterimanya. Kosong = mati. */
+  agencies?: AlphaAgency[]
+  /** Tandai semua gambar sebagai buatan AI (selain yang sudah tercatat AI dari Buat Gambar). */
+  aiSource?: boolean
 }
 export type AlphaInfo = { path: string; name: string; width: number; height: number; bg: 'black' | 'white' | 'color'; color: string; thumb: string }
 export type AlphaProgress = { done: number; total: number; current: string; errors: number }
-export type AlphaResult = { outDir: string; pngs: string[]; files: number; zipPath?: string; errors: { path: string; error: string }[]; canceled: boolean }
+export type AlphaResult = {
+  outDir: string
+  pngs: string[]
+  files: number
+  zipPath?: string
+  errors: { path: string; error: string }[]
+  canceled: boolean
+  /** File utama tiap agensi (PNG/JPG/PSD) untuk diberi metadata. */
+  agencyFiles?: string[]
+  /** Catatan per agensi, mis. file AI yang dilewati untuk Shutterstock. */
+  notes?: string[]
+}
 
 export type GenAction = 'keep' | 'discard' | 'retry' | 'again' | 'cancel'
 
@@ -316,6 +347,9 @@ export type Api = {
   /** Pilih file Chrome secara manual. null kalau dibatalkan. */
   pickBrowser(): Promise<string | null>
   onProfilesChanged(cb: (state: ProfilesState) => void): () => void
+
+  /** Program upscale ada di aplikasi ini? */
+  upscaleInfo(): Promise<{ ok: boolean; reason?: string }>
 
   updateState(): Promise<UpdateState>
   updateCheck(): Promise<UpdateState>

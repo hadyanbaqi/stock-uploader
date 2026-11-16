@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { AccountGroup, Settings } from '../shared/types'
+import { UPSCALE_DEFAULTS, UPSCALE_MODELS } from '../shared/upscale'
 
 /** File JSON kecil: baca sekali, tulis atomik (file sementara lalu ganti nama). */
 function jsonStore<T>(name: string, fallback: () => T) {
@@ -29,7 +30,7 @@ function jsonStore<T>(name: string, fallback: () => T) {
 }
 
 const groupsStore = jsonStore<{ groups: AccountGroup[] }>('groups.json', () => ({ groups: [] }))
-const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep', genDir: '', genModel: '', genAspect: '3:2', genAutoZip: true, genClearOnStart: true, browserPath: '', browserDelay: 2, browserTestFirst: true, autoUpdate: true }))
+const settingsStore = jsonStore<Settings>('settings.json', () => ({ perAccount: 2, aiMode: 'hemat', theme: 'dark', markMaster: true, afterDone: 'keep', genDir: '', genModel: '', genAspect: '3:2', genAutoZip: true, genClearOnStart: true, browserPath: '', browserDelay: 2, browserTestFirst: true, autoUpdate: true, genUpscale: { ...UPSCALE_DEFAULTS }, upscaleWarned: false }))
 const secretStore = jsonStore<{ aiKeyEnc?: string }>('secrets.json', () => ({}))
 
 /** API key AI, disimpan terenkripsi lewat brankas sistem seperti password FTP. */
@@ -94,6 +95,17 @@ export async function saveSettings(patch: Partial<Settings>): Promise<Settings> 
   if (patch.browserDelay !== undefined) next.browserDelay = Math.max(0, Math.min(30, Math.round(Number(patch.browserDelay) || 0)))
   if (patch.browserTestFirst !== undefined) next.browserTestFirst = Boolean(patch.browserTestFirst)
   if (patch.autoUpdate !== undefined) next.autoUpdate = Boolean(patch.autoUpdate)
+  if (patch.upscaleWarned !== undefined) next.upscaleWarned = Boolean(patch.upscaleWarned)
+  if (patch.genUpscale) {
+    const u = { ...UPSCALE_DEFAULTS, ...(next.genUpscale ?? {}), ...patch.genUpscale }
+    const model = u.model in UPSCALE_MODELS ? u.model : UPSCALE_DEFAULTS.model
+    next.genUpscale = {
+      enabled: Boolean(u.enabled),
+      model,
+      scale: ([2, 3, 4] as const).includes(u.scale) ? u.scale : 4,
+      format: (['jpg', 'png', 'webp'] as const).includes(u.format) ? u.format : 'jpg'
+    }
+  }
   await settingsStore.write(next)
   return next
 }

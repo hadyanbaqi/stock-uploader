@@ -17,6 +17,7 @@ import { cancelRun, expandImages, inspect as alphaInspect, preview as alphaPrevi
 import { imageThumb } from './frames'
 import { ProfileManager, profileDir } from './profiles'
 import { Updater } from './updater'
+import { upscalerAvailable } from './upscaler'
 import type { FileMeta } from '../shared/metadata'
 import type { ProfileInput } from '../shared/profiles'
 import type { AccountGroup, AccountInput, AlphaOptions, GenAction, GenStartInput, QueueAction, QueueTask, Settings } from '../shared/types'
@@ -389,6 +390,7 @@ function registerIpc(): void {
     return s
   })
 
+  ipcMain.handle('upscale:info', () => upscalerAvailable())
   ipcMain.handle('update:state', () => updater!.getState())
   ipcMain.handle('update:check', () => updater!.check())
   ipcMain.handle('update:download', () => updater!.download())

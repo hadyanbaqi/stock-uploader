@@ -992,6 +992,48 @@ html[data-dark] .gen-badge {
   flex: 1;
   min-width: 0;
 }
+.alpha-agency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+.alpha-agency {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.alpha-agency.on {
+  border-color: var(--accent);
+  background: var(--run-bg);
+}
+.alpha-agency em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 11px;
+}
+.alpha-agency-notes {
+  margin: 6px 0 2px;
+  padding-left: 18px;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.alpha-agency-notes strong {
+  color: var(--text);
+}
+.warn-text {
+  color: #9a5b00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .warn-text {
+    color: #f3b75b;
+  }
+}
+:root[data-theme='dark'] .warn-text {
+  color: #f3b75b;
+}
 .grow-ellipsis {
   min-width: 0;
   overflow: hidden;

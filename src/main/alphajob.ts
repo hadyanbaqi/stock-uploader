@@ -4,9 +4,10 @@ import path from 'node:path'
 import type { AlphaInfo, AlphaOptions, AlphaProgress, AlphaResult } from '../shared/types'
 import { detectBackground, downscale, encodePng, encodePsd, extractAlpha, type BgKind } from './alpha'
 import { expandPaths } from './files'
-import { previewJpegFile } from './frames'
+import { previewJpegFile, psdPreviewJpeg } from './frames'
 import { getMeta, updateMeta } from './metadata'
 import { writeZip } from './zip'
+import { ALPHA_AGENCIES, agencyScale, isAlphaAgency, planAgencyFiles, skippedForAi, type AlphaAgency } from '../shared/alphaAgency'
 
 /** Proses Transparan di proses utama: baca gambar (nativeImage), hitung alpha, tulis PNG/JPG/PSD. */
 
@@ -40,16 +41,19 @@ function toRgba(img: NativeImage): { data: Uint8Array; w: number; h: number } {
   return { data: out, w, h }
 }
 
-function load(file: string, minMp: boolean): NativeImage {
+function load(file: string, minMp: boolean, agencies: AlphaAgency[]): NativeImage {
   let img = nativeImage.createFromPath(file)
   if (img.isEmpty()) throw new Error('Gambar tidak bisa dibaca (hanya JPG/PNG).')
   const { width, height } = img.getSize()
-  if (minMp && width * height < 4_000_000) {
-    const s = Math.sqrt(6_000_000 / (width * height))
-    img = img.resize({ width: Math.round(width * s), height: Math.round(height * s), quality: 'best' })
-  }
+  let s = minMp && width * height < 4_000_000 ? Math.sqrt(6_000_000 / (width * height)) : 1
+  // Paket agensi: perbesar sampai memenuhi syarat semua agensi terpilih (mis. 123RF 6 MP, Freepik 2.000 px).
+  s = Math.max(s, agencyScale(width, height, agencies))
+  if (s > 1) img = img.resize({ width: Math.round(width * s), height: Math.round(height * s), quality: 'best' })
   return img
 }
+
+/** Batas bawah PSD Freepik (1,5 MB). */
+const FREEPIK_PSD_MIN = 1.5 * 1024 * 1024
 
 const hex = (c: number[]) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
 const fromHex = (h: string): [number, number, number] => {
@@ -140,6 +144,12 @@ export async function runAlpha(paths: string[], o: AlphaOptions): Promise<AlphaR
   const result: AlphaResult = { outDir, pngs: [], files: 0, errors: [], canceled: false }
   const written: string[] = []
   const used = new Set<string>()
+  const agencies = (o.agencies ?? []).filter(isAlphaAgency)
+  const aiSkipped = new Map<AlphaAgency, number>()
+  let smallPsd = 0
+  if (agencies.length) result.agencyFiles = []
+  const taken = (b: string) =>
+    used.has(b) || existsSync(path.join(outDir, `${b}.png`)) || planAgencyFiles(b, agencies).some((f) => existsSync(path.join(outDir, ...f.rel.split('/'))))
   const send = (p: AlphaProgress) => {
     for (const w of BrowserWindow.getAllWindows()) w.webContents.send('alpha:progress', p)
   }
@@ -153,9 +163,9 @@ export async function runAlpha(paths: string[], o: AlphaOptions): Promise<AlphaR
       send({ done: i, total: files.length, current: path.basename(src), errors: result.errors.length })
       try {
         let base = outName(src, i, o, files.length)
-        for (let n = 2; used.has(base) || existsSync(path.join(outDir, `${base}.png`)); n++) base = `${outName(src, i, o, files.length).slice(0, 26 - String(n).length)}-${n}`
+        for (let n = 2; taken(base); n++) base = `${outName(src, i, o, files.length).slice(0, 26 - String(n).length)}-${n}`
         used.add(base)
-        const img = load(src, o.minMp)
+        const img = load(src, o.minMp, agencies)
         const px = toRgba(img)
         const small = downscale(px.data, px.w, px.h, 400)
         const bg = background(small.data, small.w, small.h, o)
@@ -176,10 +186,42 @@ export async function runAlpha(paths: string[], o: AlphaOptions): Promise<AlphaR
         }
         // Tanda AI dan catatan ikut dari file asal (mis. hasil Buat Gambar).
         const m = await getMeta(src)
+        const ai = Boolean(m?.aiGenerated) || Boolean(o.aiSource)
         await updateMeta(png, {
-          aiGenerated: Boolean(m?.aiGenerated),
+          aiGenerated: ai,
           notes: [m?.notes, 'Transparent PNG: isolated effect on transparent background, no background.'].filter(Boolean).join(' ').slice(0, 500)
         }).catch(() => undefined)
+
+        if (agencies.length) {
+          const skip = skippedForAi(agencies, ai)
+          for (const a of skip) aiSkipped.set(a, (aiSkipped.get(a) ?? 0) + 1)
+          const use = agencies.filter((a) => !skip.includes(a))
+          let psdFile = ''
+          for (const f of planAgencyFiles(base, use)) {
+            const dest = path.join(outDir, ...f.rel.split('/'))
+            await fs.mkdir(path.dirname(dest), { recursive: true })
+            if (f.kind === 'png') {
+              await fs.copyFile(png, dest)
+            } else if (f.kind === 'psd') {
+              const buf = encodePsd(fg, px.w, px.h, bg.color, 'Efek')
+              await fs.writeFile(dest, buf)
+              if (f.agency === 'freepik' && buf.length < FREEPIK_PSD_MIN) smallPsd++
+              psdFile = dest
+            } else if (f.agency === 'freepik' && psdFile) {
+              // Pratinjau Freepik = gambar gabungan PSD itu sendiri, sisi terpanjang maks 10.000 px.
+              await psdPreviewJpeg(psdFile, dest)
+            } else {
+              // JPG bersih: efek di atas latar aslinya, tanpa teks (siap jual, bukan pratinjau).
+              await previewJpegFile(png, dest, 'color', hex(bg.color), '')
+            }
+            written.push(dest)
+            if (f.main) {
+              result.agencyFiles!.push(dest)
+              const kind = f.kind === 'png' ? 'Transparent PNG: isolated effect on transparent background.' : 'Effect on solid background, easy to blend (screen/multiply).'
+              await updateMeta(dest, { aiGenerated: ai, notes: [m?.notes, kind].filter(Boolean).join(' ').slice(0, 500) }).catch(() => undefined)
+            }
+          }
+        }
       } catch (err) {
         result.errors.push({ path: src, error: String((err as Error)?.message ?? err) })
       }
@@ -187,9 +229,14 @@ export async function runAlpha(paths: string[], o: AlphaOptions): Promise<AlphaR
       await new Promise((r) => setImmediate(r))
     }
     result.files = written.length
+    if (agencies.length) {
+      result.notes = []
+      for (const [a, n] of aiSkipped) result.notes.push(`${ALPHA_AGENCIES[a].label}: ${n} gambar AI dilewati (agensi ini menolak konten AI).`)
+      if (smallPsd) result.notes.push(`Freepik: ${smallPsd} PSD di bawah 1,5 MB (batas minimal Freepik). Pakai gambar lebih besar.`)
+    }
     if (o.zip && written.length) {
       const zipPath = `${outDir}.zip`
-      await writeZip(zipPath, written)
+      await writeZip(zipPath, written, outDir)
       result.zipPath = zipPath
     }
     send({ done: files.length, total: files.length, current: '', errors: result.errors.length })
