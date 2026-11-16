@@ -46,6 +46,22 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
 
+**Versi 1.6.0: Profil Browser**
+
+- Halaman **Profil Browser**: satu profil = satu Chrome terpisah (login, cookie, riwayat, ekstensi sendiri), jadi
+  dasbor beberapa akun kontributor bisa dibuka bersamaan tanpa saling logout.
+- Proxy per profil: HTTP, HTTPS, SOCKS5, dengan atau tanpa username/password. Tempel dalam format apa pun
+  (`host:port:user:pass`, `user:pass@host:port`, `socks5://…`), langsung diisi ke formulir.
+- Proxy ber-password berjalan lewat perantara lokal di 127.0.0.1 (tanpa popup login, SOCKS5 juga bisa).
+  Gagal tertutup: kalau proxy mati, Chrome tidak bisa membuka halaman, tidak pernah lewat IP asli.
+- Tes IP satu/semua profil: "OK - IP x.x.x.x (ms)", "Gagal" dengan alasan, "Berubah - belum dites" setelah proxy diganti,
+  peringatan kalau dua profil keluar dengan IP yang sama.
+- Buka satu (klik dua kali), yang dipilih (Ctrl/Shift + klik), atau semua dalam grup dengan jeda antarprofil.
+  Proxy dites dulu sebelum Chrome dibuka (bisa dimatikan). WebRTC dibatasi supaya IP asli tidak bocor.
+- Grup di panel kiri, cari, pindah grup, duplikat setelan (tanpa login), halaman awal per profil (preset dasbor agensi).
+- Password proxy disimpan terenkripsi seperti password FTP. Chrome/Chromium/Brave/Edge dicari otomatis atau dipilih manual.
+- Catatan: sidik jari browser (layar, font, WebGL) sama di semua profil; fitur ini untuk mengelola akun tim/klien.
+
 **Versi 1.4.0: Transparan (VFX → PNG transparan)**
 
 - Halaman **Transparan**: seret atau pilih gambar/folder (atau "Jadikan transparan" dari Buat Gambar).
@@ -113,6 +129,7 @@ npm run test:meta    # tes metadata: aturan SEO, CSV, AI tiruan, ExifTool
 npm run test:csv     # tes impor CSV, folder agensi, metadata-master, pindah file
 npm run test:gen     # tes Buat Gambar: Ciora tiruan, nama file, ZIP
 npm run test:alpha   # tes Transparan: alpha, PNG, PSD
+npm run test:profiles # tes Profil Browser: format proxy, flag Chrome, perantara proxy, cek IP
 npm run test:app     # tes aplikasi asli: upload, riwayat, metadata
 npm run dist:win     # installer Windows
 npm run dist:mac     # installer Mac (harus di Mac)

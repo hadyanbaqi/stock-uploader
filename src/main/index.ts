@@ -15,13 +15,16 @@ import { defaultGenDir, GenQueue } from './genqueue'
 import { listImageModels } from './imagegen'
 import { cancelRun, expandImages, inspect as alphaInspect, preview as alphaPreview, runAlpha } from './alphajob'
 import { imageThumb } from './frames'
+import { ProfileManager, profileDir } from './profiles'
 import type { FileMeta } from '../shared/metadata'
+import type { ProfileInput } from '../shared/profiles'
 import type { AccountGroup, AccountInput, AlphaOptions, GenAction, GenStartInput, QueueAction, QueueTask, Settings } from '../shared/types'
 
 let queue: UploadQueue | null = null
 let history: History | null = null
 let after: AfterUpload | null = null
 let gen: GenQueue | null = null
+let profiles: ProfileManager | null = null
 let blocker: number | null = null
 let quitting = false
 
@@ -38,14 +41,18 @@ function updateKeepAwake(tasks: QueueTask[]): void {
 /** true = boleh keluar. */
 function confirmQuit(win?: BrowserWindow): boolean {
   const n = queue?.activeCount() ?? 0
-  if (!n) return true
+  const open = profiles?.runningCount() ?? 0
+  if (!n && !open) return true
   const opts = {
     type: 'question' as const,
     buttons: ['Keluar', 'Batal'],
     defaultId: 1,
     cancelId: 1,
-    message: `Masih ada ${n} upload di antrean.`,
-    detail: 'Kalau keluar sekarang, upload berhenti dan otomatis dilanjutkan saat aplikasi dibuka lagi.'
+    message: n ? `Masih ada ${n} upload di antrean.` : `${open} profil Chrome masih terbuka.`,
+    detail: [
+      n ? 'Kalau keluar sekarang, upload berhenti dan otomatis dilanjutkan saat aplikasi dibuka lagi.' : '',
+      open ? `${open} jendela profil Chrome yang dibuka dari aplikasi ini ikut ditutup.` : ''
+    ].filter(Boolean).join('\n')
   }
   return (win ? dialog.showMessageBoxSync(win, opts) : dialog.showMessageBoxSync(opts)) === 0
 }
@@ -380,6 +387,41 @@ function registerIpc(): void {
     return s
   })
 
+  ipcMain.handle('profiles:state', () => profiles!.state())
+  ipcMain.handle('profiles:save', (_e, input: ProfileInput) => profiles!.save(input))
+  ipcMain.handle('profiles:duplicate', (_e, id: string) => profiles!.duplicate(String(id)))
+  ipcMain.handle('profiles:remove', (_e, ids: string[], deleteData: boolean) => profiles!.remove(ids.map(String), Boolean(deleteData)))
+  ipcMain.handle('profiles:groupSave', (_e, g: { id?: string; name: string }) => profiles!.saveGroup(g))
+  ipcMain.handle('profiles:groupRemove', (_e, id: string) => profiles!.removeGroup(String(id)))
+  ipcMain.handle('profiles:move', (_e, ids: string[], groupId: string | null) => profiles!.moveToGroup(ids.map(String), groupId ? String(groupId) : null))
+  ipcMain.handle('profiles:open', (_e, ids: string[]) => profiles!.open(ids.map(String)))
+  ipcMain.handle('profiles:close', (_e, ids: string[]) => profiles!.close(ids.map(String)))
+  ipcMain.handle('profiles:test', (_e, ids: string[]) => profiles!.test(ids.map(String)))
+  ipcMain.handle('profiles:testInput', (_e, input: ProfileInput) => profiles!.testInput(input))
+  ipcMain.handle('profiles:showFolder', async (_e, id: string) => {
+    const dir = profileDir(String(id))
+    const { mkdir } = await import('node:fs/promises')
+    await mkdir(dir, { recursive: true })
+    await shell.openPath(dir)
+  })
+  ipcMain.handle('profiles:pickBrowser', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined
+    const opts: Electron.OpenDialogOptions = {
+      title: 'Pilih Chrome',
+      properties: ['openFile'],
+      filters: process.platform === 'win32' ? [{ name: 'Program', extensions: ['exe'] }] : []
+    }
+    const r = win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts)
+    if (r.canceled || !r.filePaths[0]) return null
+    let picked = r.filePaths[0]
+    // Di Mac yang dipilih biasanya "Google Chrome.app"; yang dijalankan adalah file di dalamnya.
+    if (process.platform === 'darwin' && picked.endsWith('.app')) {
+      picked = path.join(picked, 'Contents', 'MacOS', path.basename(picked, '.app'))
+    }
+    await saveSettings({ browserPath: picked })
+    return picked
+  })
+
   ipcMain.handle('accounts:test', async (_e, input: AccountInput) => {
     // Password dari formulir dipakai kalau diisi; kalau kosong, pakai password tersimpan.
     let password = input.password ?? ''
@@ -442,6 +484,14 @@ if (!gotLock) {
       for (const w of BrowserWindow.getAllWindows()) w.webContents.send('app:notice', text)
     })
     await gen.init()
+    profiles = new ProfileManager(
+      (state) => {
+        for (const w of BrowserWindow.getAllWindows()) w.webContents.send('profiles:changed', state)
+      },
+      (text) => {
+        for (const w of BrowserWindow.getAllWindows()) w.webContents.send('app:notice', text)
+      }
+    )
     registerIpc()
     const win = createWindow()
     if (process.env.SU_E2E) {
@@ -465,7 +515,7 @@ if (!gotLock) {
     queue = null
     e.preventDefault()
     closeHelper()
-    void Promise.allSettled([q.shutdown().then(() => after?.flush()), gen?.shutdown(), flushMeta(), closeExifTool()]).finally(() => app.quit())
+    void Promise.allSettled([q.shutdown().then(() => after?.flush()), gen?.shutdown(), profiles?.shutdown(), flushMeta(), closeExifTool()]).finally(() => app.quit())
   })
 
   app.on('window-all-closed', () => {

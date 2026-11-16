@@ -53,6 +53,9 @@ jobs:
       - name: Tes Transparan (alpha, PNG, PSD)
         run: npm run test:alpha
 
+      - name: Tes Profil Browser (format proxy, flag Chrome, perantara proxy, cek IP)
+        run: npm run test:profiles
+
       - name: Tes aplikasi asli (upload, riwayat, metadata)
         timeout-minutes: 10
         run: npm run test:app

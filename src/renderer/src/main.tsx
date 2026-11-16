@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles.css'
 import './queue.css'
+import './profiles.css'
 import './dark.css'
 
 // File yang dijatuhkan di luar area upload jangan sampai membuka file itu di jendela aplikasi.
