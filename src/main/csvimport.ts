@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { ADOBE_CATEGORIES, SHUTTERSTOCK_CATEGORIES, type FileMeta } from '../shared/metadata.ts'
+import { ADOBE_CATEGORIES, SHUTTERSTOCK_CATEGORIES, cleanKeywords, type FileMeta } from '../shared/metadata.ts'
 import { parseCsv, type CsvTable } from './csvtable.ts'
 
 /**
@@ -20,16 +20,7 @@ const COLS = {
 }
 
 function keywordsOf(v: string): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const k of v.split(/[,;]/)) {
-    const w = k.toLowerCase().replace(/\s+/g, ' ').trim()
-    if (w && !seen.has(w)) {
-      seen.add(w)
-      out.push(w)
-    }
-  }
-  return out.slice(0, 49)
+  return cleanKeywords(v.split(/[,;]/))
 }
 
 /** Baris CSV → metadata per nama file (huruf kecil). */

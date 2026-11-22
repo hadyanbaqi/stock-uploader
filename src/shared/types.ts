@@ -278,6 +278,11 @@ export type Api = {
 
   metaList(paths: string[]): Promise<MetaRecord[]>
   metaUpdate(path: string, patch: Partial<FileMeta>): Promise<MetaRecord>
+  metaAddKeywords(
+    paths: string[],
+    words: string[],
+    position: 'front' | 'back'
+  ): Promise<{ updated: number; unchanged: number; skippedBusy: number; full: number; keywords: string[] }>
   metaGenerate(paths: string[], overwrite: boolean): Promise<{ queued: number; skipped: number }>
   metaCancel(): Promise<void>
   /** previews = JPG pratinjau PSD yang baru dibuat; smallPreviews = yang sisi terpanjangnya < 2.000 px. */

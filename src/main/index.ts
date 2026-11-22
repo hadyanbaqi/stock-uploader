@@ -6,7 +6,7 @@ import { expandPaths, FILE_KINDS } from './files'
 import { History, historyCsv } from './history'
 import { UploadQueue } from './queue'
 import { deleteGroup, getAiKey, getSettings, listGroups, saveGroup, saveSettings, setAiKey } from './store'
-import { aiFlags, cancelGenerate, exportCsv, flushMeta, generate, importFromCsv, inject, listMeta, updateMeta } from './metadata'
+import { addKeywords, aiFlags, cancelGenerate, exportCsv, flushMeta, generate, importFromCsv, inject, listMeta, updateMeta } from './metadata'
 import { closeHelper } from './frames'
 import { closeExifTool } from './inject'
 import { testApiKey } from './ai'
@@ -269,6 +269,9 @@ function registerIpc(): void {
 
   ipcMain.handle('meta:list', (_e, paths: string[]) => listMeta(paths.map(String)))
   ipcMain.handle('meta:update', (_e, p: string, patch: Partial<FileMeta>) => updateMeta(String(p), patch))
+  ipcMain.handle('meta:addKeywords', (_e, paths: string[], words: string[], position: string) =>
+    addKeywords(paths.map(String), words.map(String), position === 'front' ? 'front' : 'back')
+  )
   ipcMain.handle('meta:generate', (_e, paths: string[], overwrite: boolean) => generate(paths.map(String), Boolean(overwrite)))
   ipcMain.handle('meta:cancel', () => cancelGenerate())
   ipcMain.handle('meta:inject', (_e, paths: string[]) => inject(paths.map(String)))

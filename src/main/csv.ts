@@ -1,4 +1,4 @@
-import { ADOBE_CATEGORIES, type FileMeta } from '../shared/metadata.ts'
+import { ADOBE_CATEGORIES, cleanKeywords, type FileMeta } from '../shared/metadata.ts'
 
 export type CsvItem = { name: string; ext: string; meta: FileMeta }
 
@@ -19,7 +19,7 @@ const isVideo = (ext: string) => ['mp4', 'mov'].includes(ext.toLowerCase())
  * (nama file, judul, deskripsi, keyword).
  */
 export function buildCsv(agency: string, items: CsvItem[]): string {
-  const kw = (m: FileMeta) => m.keywords.join(', ')
+  const kw = (m: FileMeta) => cleanKeywords(m.keywords).join(', ')
   switch (agency) {
     case 'adobe':
       return table(

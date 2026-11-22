@@ -8,7 +8,7 @@ import { crc32, deflateSync } from 'node:zlib'
 import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { cleanMeta } from '../src/shared/metadata.ts'
+import { cleanMeta, cleanKeyword, cleanKeywords } from '../src/shared/metadata.ts'
 import { buildCsv } from '../src/main/csv.ts'
 
 let failed = 0
@@ -37,6 +37,15 @@ check('maksimal 49 keyword', m.keywords.length === 49, String(m.keywords.length)
 const top10 = m.keywords.slice(0, 10)
 check('kata penting judul ada di 10 keyword pertama', ['abstract', 'blue', 'gradient', 'waves'].every((w) => top10.includes(w)), top10.join(', '))
 check('kategori Shutterstock divalidasi (maks 2)', m.ssCategories.join('|') === 'Abstract|Backgrounds/Textures', m.ssCategories.join('|'))
+// Karakter khusus tidak boleh ada di keyword.
+const m3 = cleanMeta({ title: 'Cafe sunset', keywords: ['sunset!', 'café', "women's", 'r&b', 'cat.', '#tag', '(blue)', 'a/b', '100%', 'sky@', 'mix+match', 'emoji 😀', 'e-commerce', '--dash--', 'snake_case', '$$$', 'one, two', 'plain'] })
+check('keyword tanpa karakter khusus', m3.keywords.every((k) => /^[a-z0-9]+(?:[ -][a-z0-9]+)*$/.test(k)), m3.keywords.join(' | '))
+check('aksen dan apostrof dirapikan', m3.keywords.includes('cafe') && m3.keywords.includes('womens') && m3.keywords.includes('sunset') && m3.keywords.includes('cat'))
+check('tanda hubung di dalam kata tetap', m3.keywords.includes('e-commerce') && m3.keywords.includes('dash'))
+check('keyword khusus semua (mis. $$$) dibuang', !m3.keywords.includes('') && !m3.keywords.some((k) => k.includes('$')))
+check('cleanKeyword: "Hello, World!!" → "hello world"', cleanKeyword('Hello, World!!') === 'hello world')
+check('cleanKeywords: edit manual dibersihkan + tanpa dobel', cleanKeywords(['Blue!', 'blue', ' sky. ', '###']).join('|') === 'blue|sky')
+
 const m2 = cleanMeta({ title: 'Cat', keywords: 'cat, pet; animal\ncute', category: 99 }, { adobeCategory: 1, aiGenerated: true, notes: 'n' })
 check('keyword dari teks dipisah koma/titik koma/baris', m2.keywords.includes('pet') && m2.keywords.includes('cute'))
 check('kategori salah memakai nilai lama, tanda AI dipertahankan', m2.adobeCategory === 1 && m2.aiGenerated && m2.notes === 'n')
@@ -141,7 +150,7 @@ ihdr[8] = 8
 ihdr[9] = 2
 const raw = Buffer.from([0, 255, 0, 0, 0, 0, 255, 0, 0, 0, 255, 0, 255, 255, 255])
 const PNG = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]).toString('base64')
-const meta = { ...m, title: 'Ombak biru — blue waves', description: 'Café sunset with ümlauts', keywords: ['blue', 'waves', 'sunset', 'café'] }
+const meta = { ...m, title: 'Ombak biru — blue waves', description: 'Café sunset with ümlauts', keywords: ['blue', 'waves', 'sunset', 'cafe'] }
 for (const [name, b64] of [['foto.jpg', JPG], ['gambar.png', PNG]] as const) {
   const f = path.join(dir, name)
   writeFileSync(f, Buffer.from(b64, 'base64'))

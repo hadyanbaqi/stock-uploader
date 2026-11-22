@@ -46,6 +46,11 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
 - Ekspor/impor daftar akun tanpa password (untuk pindah komputer)
 - Peringatan akun yang password-nya belum diisi
 
+**Versi 1.7.1: Keyword bersih + tambah keyword massal**
+
+- Keyword hanya berisi huruf a-z, angka, spasi, dan tanda hubung di dalam kata. Karakter khusus (`. , ! ? & / @ ' " #`, tanda kurung, emoji) dibuang, huruf beraksen jadi huruf biasa ("café" → "cafe"). Berlaku untuk hasil AI, edit manual, import CSV, download CSV, dan Simpan ke file; data lama ikut dibersihkan.
+- Halaman Metadata: **Tambah keyword** manual ke semua file atau hanya yang dipilih (kotak centang di kartu), di depan atau di belakang daftar. Tidak dobel, maksimal 49 per file.
+
 **Versi 1.7.0: Upscale AI di Buat Gambar**
 
 - Sakelar **Upscale AI saat disimpan** di Buat Gambar: hasil generate langsung diperbesar dengan Real-ESRGAN

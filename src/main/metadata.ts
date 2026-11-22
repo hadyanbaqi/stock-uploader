@@ -2,7 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import { createHash } from 'node:crypto'
 import { existsSync, promises as fs } from 'node:fs'
 import path from 'node:path'
-import { AGENCY_CSV, canInject, EMPTY_META, type FileMeta, type MetaRecord } from '../shared/metadata'
+import { AGENCY_CSV, canInject, cleanKeywords, EMPTY_META, type FileMeta, type MetaRecord } from '../shared/metadata'
 import { generateMeta } from './ai'
 import { buildCsv } from './csv'
 import { lookupCsv } from './csvimport'
@@ -29,6 +29,8 @@ async function load(): Promise<Record<string, Stored>> {
   if (records) return records
   try {
     records = JSON.parse(await fs.readFile(dataFile(), 'utf8')) as Record<string, Stored>
+    // Data lama bisa berisi keyword dengan karakter khusus; rapikan sekali saat dimuat.
+    for (const r of Object.values(records)) if (Array.isArray(r.keywords)) r.keywords = cleanKeywords(r.keywords)
   } catch {
     records = {}
   }
@@ -103,11 +105,7 @@ export async function updateMeta(p: string, patch: Partial<FileMeta>): Promise<M
   const r = all[p] ?? fresh(p, (await fs.stat(p).catch(() => ({ size: 0 }))).size)
   const next: Stored = { ...r, ...patch }
   if (patch.keywords) {
-    const seen = new Set<string>()
-    next.keywords = patch.keywords
-      .map((k) => k.toLowerCase().replace(/\s+/g, ' ').trim())
-      .filter((k) => k && !seen.has(k) && (seen.add(k), true))
-      .slice(0, 49)
+    next.keywords = cleanKeywords(patch.keywords)
   }
   if (patch.title !== undefined) next.title = patch.title.slice(0, 200)
   const edited = ['title', 'description', 'keywords', 'adobeCategory', 'ssCategories', 'aiGenerated'].some((k) => k in patch)
@@ -119,6 +117,49 @@ export async function updateMeta(p: string, patch: Partial<FileMeta>): Promise<M
   scheduleSave()
   await emit(p)
   return view(p)
+}
+
+/**
+ * Tambah keyword manual ke banyak file sekaligus (semua atau yang dipilih).
+ * Keyword dibersihkan dari karakter khusus, tidak dobel, maksimal 49 per file.
+ * "front" = di depan (masuk 10 keyword terpenting), "back" = di belakang.
+ */
+export async function addKeywords(
+  paths: string[],
+  words: string[],
+  position: 'front' | 'back'
+): Promise<{ updated: number; unchanged: number; skippedBusy: number; full: number; keywords: string[] }> {
+  const add = cleanKeywords(words)
+  const out = { updated: 0, unchanged: 0, skippedBusy: 0, full: 0, keywords: add }
+  if (!add.length) return out
+  const all = await load()
+  for (const p of paths) {
+    if (busy.has(p) || queue.includes(p)) {
+      out.skippedBusy++
+      continue
+    }
+    const cur = all[p]?.keywords ?? []
+    // Yang sudah ada tidak dobel; kalau ditaruh di depan, pindah ke depan.
+    const merged = position === 'front' ? cleanKeywords([...add, ...cur]) : cleanKeywords([...cur, ...add])
+    if (merged.join('|') === cur.join('|')) {
+      out.unchanged++
+      if (position === 'back' && cur.length >= 49 && !add.every((w) => cur.includes(w))) out.full++
+      continue
+    }
+    if (position === 'back' && cur.length >= 49) out.full++
+    const prev = all[p]
+    const prevStatus = prev?.status ?? 'none'
+    const hadTitle = Boolean(prev?.title)
+    await updateMeta(p, { keywords: merged })
+    // File yang belum punya judul tetap "Belum ada", supaya tombol "Buat metadata" masih menghitungnya.
+    if (!hadTitle && all[p]) {
+      all[p].status = prevStatus
+      scheduleSave()
+      await emit(p)
+    }
+    out.updated++
+  }
+  return out
 }
 
 /** Masukkan file ke antrean generate AI (2 file sekaligus). */

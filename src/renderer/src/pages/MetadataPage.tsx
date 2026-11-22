@@ -6,6 +6,7 @@ import {
   AI_MODES,
   SHUTTERSTOCK_CATEGORIES,
   canInject,
+  cleanKeywords,
   type AiMode,
   type FileMeta,
   type MetaRecord
@@ -38,6 +39,9 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
   const [agencies, setAgencies] = useState<Set<string>>(loadAgencies)
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [extraKw, setExtraKw] = useState('')
+  const [kwPos, setKwPos] = useState<'front' | 'back'>('back')
 
   const paths = useMemo(() => files.map((f) => f.path), [files])
 
@@ -76,6 +80,15 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
   const todo = list.filter((r) => r.status === 'none' || r.status === 'error')
   const withMeta = list.filter((r) => r.title && r.keywords.length)
   const generating = count(['generating'])
+  const selectedPaths = paths.filter((p) => selected.has(p))
+  const extraList = cleanKeywords(extraKw.split(/[,;\n]/))
+  const toggleSel = (p: string) =>
+    setSelected((s) => {
+      const n = new Set(s)
+      if (n.has(p)) n.delete(p)
+      else n.add(p)
+      return n
+    })
   const mode = settings?.aiMode ?? 'hemat'
   const videoTodo = todo.filter((r) => /\.(mp4|mov)$/i.test(r.name)).length
   const cost = mode === 'gratis' ? 0 : mode === 'detail' ? videoTodo * 20 + (todo.length - videoTodo) * 3 : todo.length * 3
@@ -139,6 +152,24 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
         r.skipped && `${r.skipped} file sudah punya metadata, tidak ditimpa.`
       ]
       setNote(parts.filter(Boolean).join(' '))
+    })
+
+  const addKw = (target: string[]) =>
+    run(async () => {
+      const r = await window.api.metaAddKeywords(target, extraList, kwPos)
+      setNote(
+        [
+          r.updated
+            ? `Keyword "${r.keywords.join(', ')}" ditambahkan ke ${r.updated} file (${kwPos === 'front' ? 'di depan' : 'di belakang'}).`
+            : 'Tidak ada file yang berubah.',
+          r.unchanged && `${r.unchanged} file sudah punya keyword itu.`,
+          r.full && `${r.full} file sudah penuh 49 keyword, keyword baru tidak muat (pilih "di depan" untuk menggesernya).`,
+          r.skippedBusy && `${r.skippedBusy} file sedang dibuat AI, dilewati.`
+        ]
+          .filter(Boolean)
+          .join(' ')
+      )
+      if (r.updated) setExtraKw('')
     })
 
   async function changeMode(m: AiMode) {
@@ -230,6 +261,43 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
             Pilih CSV…
           </button>
         </div>
+        <div className="meta-bar-row">
+          <span className="small">Tambah keyword:</span>
+          <input
+            className="grow"
+            style={{ minWidth: 200 }}
+            placeholder="mis. summer, travel, holiday (pisahkan dengan koma)"
+            value={extraKw}
+            disabled={generating > 0}
+            onChange={(e) => setExtraKw(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && extraList.length && selectedPaths.length && void addKw(selectedPaths)}
+          />
+          <select value={kwPos} onChange={(e) => setKwPos(e.target.value as 'front' | 'back')} title="Di depan = masuk 10 keyword terpenting">
+            <option value="back">Di belakang</option>
+            <option value="front">Di depan</option>
+          </select>
+          <button className="btn" disabled={!extraList.length || !selectedPaths.length || generating > 0} onClick={() => void addKw(selectedPaths)}>
+            Ke yang dipilih ({selectedPaths.length})
+          </button>
+          <button className="btn" disabled={!extraList.length || !list.length || generating > 0} onClick={() => void addKw(list.map((r) => r.path))}>
+            Ke semua ({list.length})
+          </button>
+        </div>
+        {extraKw.trim() && (
+          <div className="muted small">
+            Yang akan ditambahkan: {extraList.length ? extraList.join(', ') : 'tidak ada (karakter khusus dibuang)'}
+          </div>
+        )}
+        <div className="meta-bar-row">
+          <span className="small">Pilih file:</span>
+          <button className="btn small" onClick={() => setSelected(new Set(paths))}>
+            Pilih semua
+          </button>
+          <button className="btn small" disabled={!selectedPaths.length} onClick={() => setSelected(new Set())}>
+            Kosongkan
+          </button>
+          <span className="muted small">{selectedPaths.length} dipilih. Centang kotak di kartu file untuk memilih.</span>
+        </div>
         <div className="meta-bar-row csv-row">
           <span className="small">CSV untuk:</span>
           {AGENCY_CSV.map((a) => (
@@ -256,14 +324,26 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
 
       <div className="meta-list">
         {list.map((r) => (
-          <MetaCard key={r.path} r={r} onRegenerate={() => void generate([r.path], true)} canGenerate={Boolean(hasKey)} />
+          <MetaCard key={r.path} r={r} selected={selected.has(r.path)} onToggle={() => toggleSel(r.path)} onRegenerate={() => void generate([r.path], true)} canGenerate={Boolean(hasKey)} />
         ))}
       </div>
     </div>
   )
 }
 
-function MetaCard({ r, onRegenerate, canGenerate }: { r: MetaRecord; onRegenerate: () => void; canGenerate: boolean }) {
+function MetaCard({
+  r,
+  selected,
+  onToggle,
+  onRegenerate,
+  canGenerate
+}: {
+  r: MetaRecord
+  selected: boolean
+  onToggle: () => void
+  onRegenerate: () => void
+  canGenerate: boolean
+}) {
   const [title, setTitle] = useState(r.title)
   const [desc, setDesc] = useState(r.description)
   const [kw, setKw] = useState(r.keywords.join(', '))
@@ -278,7 +358,7 @@ function MetaCard({ r, onRegenerate, canGenerate }: { r: MetaRecord; onRegenerat
   }, [r.generatedAt, r.path]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = (patch: Partial<FileMeta>) => void window.api.metaUpdate(r.path, patch)
-  const kwList = kw.split(',').map((k) => k.trim()).filter(Boolean)
+  const kwList = cleanKeywords(kw.split(/[,;\n]/))
   const ext = r.name.split('.').pop() ?? ''
   const busy = r.status === 'generating'
 
@@ -287,6 +367,7 @@ function MetaCard({ r, onRegenerate, canGenerate }: { r: MetaRecord; onRegenerat
       <div className="meta-thumb">{r.thumb ? <img src={r.thumb} alt="" /> : <span className="ext">{ext.toUpperCase()}</span>}</div>
       <div className="meta-body">
         <div className="meta-top">
+          <input type="checkbox" checked={selected} onChange={onToggle} title="Pilih file ini untuk tambah keyword" />
           <span className="file-name" title={r.path}>
             {r.name}
           </span>
@@ -329,7 +410,10 @@ function MetaCard({ r, onRegenerate, canGenerate }: { r: MetaRecord; onRegenerat
             value={kw}
             disabled={busy}
             onChange={(e) => setKw(e.target.value)}
-            onBlur={() => kwList.join(', ') !== r.keywords.join(', ') && save({ keywords: kwList })}
+            onBlur={() => {
+              setKw(kwList.join(', '))
+              if (kwList.join(', ') !== r.keywords.join(', ')) save({ keywords: kwList })
+            }}
           />
         </label>
         <div className="meta-row">

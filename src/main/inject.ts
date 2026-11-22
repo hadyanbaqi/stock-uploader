@@ -1,7 +1,7 @@
 import { ExifTool } from 'exiftool-vendored'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { canInject, type FileMeta } from '../shared/metadata.ts'
+import { canInject, cleanKeywords, type FileMeta } from '../shared/metadata.ts'
 
 let tool: ExifTool | null = null
 
@@ -31,7 +31,7 @@ export async function injectMeta(filePath: string, meta: FileMeta, backupDir: st
     if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
   }
 
-  const keywords = meta.keywords.slice(0, 49)
+  const keywords = cleanKeywords(meta.keywords)
   const tags: Record<string, unknown> = {
     'XMP-dc:Title': meta.title,
     'XMP-dc:Description': meta.description,

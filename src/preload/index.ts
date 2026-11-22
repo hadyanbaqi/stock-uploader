@@ -46,6 +46,7 @@ const api: Api = {
 
   metaList: (paths) => ipcRenderer.invoke('meta:list', paths),
   metaUpdate: (path, patch) => ipcRenderer.invoke('meta:update', path, patch),
+  metaAddKeywords: (paths, words, position) => ipcRenderer.invoke('meta:addKeywords', paths, words, position),
   metaGenerate: (paths, overwrite) => ipcRenderer.invoke('meta:generate', paths, overwrite),
   metaCancel: () => ipcRenderer.invoke('meta:cancel'),
   metaInject: (paths) => ipcRenderer.invoke('meta:inject', paths),

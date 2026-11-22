@@ -138,6 +138,39 @@ const BANNED = new Set([
   'openai', 'midjourney', 'shutterstock', 'getty', 'istock', 'unsplash'
 ])
 
+/**
+ * Satu keyword → hanya huruf a-z, angka, spasi, dan tanda hubung di dalam kata (mis. "t-shirt").
+ * Karakter khusus (. , ! ? @ & / + * % $ : ; | ~ ^ _ = < > \\ ' " # tanda kurung, emoji, dll) dibuang;
+ * huruf beraksen jadi huruf biasa ("café" → "cafe"); apostrof dibuang ("women's" → "womens").
+ * Hasil kosong berarti keyword tidak layak dipakai.
+ */
+export function cleanKeyword(k: unknown): string {
+  return String(k ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/['\u2018\u2019\u02bc`]/g, '')
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .map((t) => t.replace(/-{2,}/g, '-').replace(/^-+|-+$/g, ''))
+    .filter(Boolean)
+    .join(' ')
+}
+
+/** Daftar keyword → bersih, tanpa kosong/dobel, maksimal 49. Urutan dipertahankan. */
+export function cleanKeywords(list: unknown[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const k of list) {
+    const w = cleanKeyword(k)
+    if (w && !seen.has(w)) {
+      seen.add(w)
+      out.push(w)
+    }
+  }
+  return out.slice(0, 49)
+}
+
 /** Rapikan hasil AI supaya selalu sesuai aturan SEO microstock. */
 export function cleanMeta(raw: Partial<Record<string, unknown>>, prev?: Partial<FileMeta>): FileMeta {
   const str = (v: unknown) => (typeof v === 'string' ? v : '').replace(/\s+/g, ' ').trim()
@@ -159,11 +192,7 @@ export function cleanMeta(raw: Partial<Record<string, unknown>>, prev?: Partial<
   const seen = new Set<string>()
   let keywords: string[] = []
   for (const k of rawKw) {
-    const w = String(k)
-      .toLowerCase()
-      .replace(/[#"“”()[\]{}]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
+    const w = cleanKeyword(k)
     if (!w || w.length > 40 || w.split(' ').length > 3) continue
     if (w.split(/[\s-]/).some((part) => BANNED.has(part))) continue
     if (seen.has(w)) continue
