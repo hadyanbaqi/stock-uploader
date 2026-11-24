@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { readPsdComposite } from '../src/main/psd.ts'
 import { writeZip } from '../src/main/zip.ts'
-import { ALPHA_AGENCIES, ALPHA_AGENCY_ORDER, agencyScale, planAgencyFiles, skippedForAi } from '../src/shared/alphaAgency.ts'
+import { ALPHA_AGENCIES, ALPHA_AGENCY_ORDER, agencyScale, rootFileNames, planAgencyFiles, skippedForAi } from '../src/shared/alphaAgency.ts'
 import { agencyFromPath } from '../src/shared/agencyFolder.ts'
 import { readFileSync } from 'node:fs'
 import { composite, detectBackground, downscale, encodePng, encodePsd, extractAlpha, packBits } from '../src/main/alpha.ts'
@@ -111,6 +111,13 @@ const pb = packBits(Uint8Array.from([1, 1, 1, 1, 2, 3, 4, 4]))
 check('PackBits', pb.toString('hex') === 'fd01010203ff04', pb.toString('hex'))
 const psd = encodePsd(blk, W, H, [0, 0, 0])
 check('tanda PSD, 3 kanal, RGB', psd.subarray(0, 4).toString() === '8BPS' && psd.readUInt16BE(12) === 3 && psd.readUInt16BE(24) === 3)
+
+console.log('[Nama file JPG = PSD]')
+const rn = rootFileNames('api-biru-001')
+const stem = (f: string) => f.replace(/\.[^.]+$/, '')
+check('JPG pratinjau dan PSD bernama sama (syarat Freepik)', stem(rn.jpg) === stem(rn.psd) && stem(rn.png) === stem(rn.psd), `${rn.jpg} / ${rn.psd}`)
+check('tidak ada akhiran -preview / -pv', !/-preview|-pv/.test(rn.jpg))
+check('nama terpanjang (26 huruf) tetap ≤ 30 karakter', rootFileNames('a'.repeat(26)).jpg.length <= 30)
 
 console.log('[Paket per agensi]')
 const plan = planAgencyFiles('api-biru', ['shutterstock', 'freepik', 'adobe'])
