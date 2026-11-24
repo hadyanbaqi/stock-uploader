@@ -140,3 +140,11 @@ export function agencyScale(w: number, h: number, agencies: AlphaAgency[]): numb
 export function skippedForAi(agencies: AlphaAgency[], aiGenerated: boolean): AlphaAgency[] {
   return aiGenerated ? agencies.filter((a) => !ALPHA_AGENCIES[a].acceptsAi) : []
 }
+
+/**
+ * Nama file di folder utama Transparan. PNG, JPG, dan PSD memakai nama dasar yang SAMA
+ * (beda ekstensi saja), karena Freepik mewajibkan JPG pratinjau bernama sama dengan PSD-nya.
+ */
+export function rootFileNames(base: string): { png: string; jpg: string; psd: string } {
+  return { png: `${base}.png`, jpg: `${base}.jpg`, psd: `${base}.psd` }
+}

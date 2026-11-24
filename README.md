@@ -113,7 +113,7 @@ Gambar diperbesar otomatis sampai memenuhi semua agensi terpilih. Gambar AI (dar
 - Halaman **Transparan**: seret atau pilih gambar/folder (atau "Jadikan transparan" dari Buat Gambar).
 - Latar hitam/putih/warna dideteksi otomatis; transparansi dihitung per piksel (un-premultiply) sehingga glow, api,
   dan asap tetap halus tanpa halo. Atur pembersih noise dan kekuatan glow, pratinjau sebelum/sesudah dengan penggeser.
-- Keluaran: PNG transparan (sRGB), JPG preview (belah hitam|putih, hitam, putih, petak, warna + teks), PSD berlapis
+- Keluaran (nama dasar sama: `nama.png`, `nama.jpg`, `nama.psd`): PNG transparan (sRGB), JPG preview (belah hitam|putih, hitam, putih, petak, warna + teks), PSD berlapis
   (efek + latar), nama asli atau berurutan, ZIP otomatis. Diperbesar ke ±6 MP kalau di bawah 4 MP.
 - Buat Gambar: template "VFX latar hitam" dan "Asap/tinta latar putih" + 30 contoh prompt VFX siap pakai.
 - Offline, tanpa biaya; tanda AI generatif ikut dari file asal.

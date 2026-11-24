@@ -7,7 +7,7 @@ import { expandPaths } from './files'
 import { previewJpegFile, psdPreviewJpeg } from './frames'
 import { getMeta, updateMeta } from './metadata'
 import { writeZip } from './zip'
-import { ALPHA_AGENCIES, agencyScale, isAlphaAgency, planAgencyFiles, skippedForAi, type AlphaAgency } from '../shared/alphaAgency'
+import { ALPHA_AGENCIES, agencyScale, rootFileNames, isAlphaAgency, planAgencyFiles, skippedForAi, type AlphaAgency } from '../shared/alphaAgency'
 
 /** Proses Transparan di proses utama: baca gambar (nativeImage), hitung alpha, tulis PNG/JPG/PSD. */
 
@@ -149,7 +149,7 @@ export async function runAlpha(paths: string[], o: AlphaOptions): Promise<AlphaR
   let smallPsd = 0
   if (agencies.length) result.agencyFiles = []
   const taken = (b: string) =>
-    used.has(b) || existsSync(path.join(outDir, `${b}.png`)) || planAgencyFiles(b, agencies).some((f) => existsSync(path.join(outDir, ...f.rel.split('/'))))
+    used.has(b) || Object.values(rootFileNames(b)).some((n) => existsSync(path.join(outDir, n))) || planAgencyFiles(b, agencies).some((f) => existsSync(path.join(outDir, ...f.rel.split('/'))))
   const send = (p: AlphaProgress) => {
     for (const w of BrowserWindow.getAllWindows()) w.webContents.send('alpha:progress', p)
   }
@@ -175,12 +175,12 @@ export async function runAlpha(paths: string[], o: AlphaOptions): Promise<AlphaR
         written.push(png)
         result.pngs.push(png)
         if (o.jpg) {
-          const jpg = path.join(outDir, `${base}-preview.jpg`.length <= 30 ? `${base}-preview.jpg` : `${base.slice(0, 22)}-pv.jpg`)
+          const jpg = path.join(outDir, rootFileNames(base).jpg)
           await previewJpegFile(png, jpg, o.jpgStyle, o.jpgColor, o.jpgText.trim())
           written.push(jpg)
         }
         if (o.psd) {
-          const psd = path.join(outDir, `${base}.psd`)
+          const psd = path.join(outDir, rootFileNames(base).psd)
           await fs.writeFile(psd, encodePsd(fg, px.w, px.h, bg.color, 'Efek'))
           written.push(psd)
         }

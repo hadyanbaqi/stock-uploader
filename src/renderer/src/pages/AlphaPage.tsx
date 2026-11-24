@@ -291,7 +291,7 @@ export default function AlphaPage({ incoming, onConsumed, onToMetadata }: Props)
                   <input type="checkbox" checked disabled /> PNG transparan
                 </label>
                 <label className="check small">
-                  <input type="checkbox" checked={o.jpg} onChange={(e) => set('jpg', e.target.checked)} /> JPG preview
+                  <input type="checkbox" checked={o.jpg} onChange={(e) => set('jpg', e.target.checked)} /> JPG preview <span className="muted">(nama sama dengan PSD/PNG)</span>
                 </label>
                 {o.jpg && (
                   <div className="alpha-sub">
