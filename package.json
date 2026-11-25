@@ -1,7 +1,7 @@
 {
   "name": "stock-uploader",
   "productName": "Stock Uploader",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Uploader FTP/FTPS/SFTP pribadi untuk banyak akun microstock",
   "private": true,
   "main": "./out/main/index.js",

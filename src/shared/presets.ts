@@ -1,3 +1,4 @@
+import { ADOBE_ACCEPTS, ADOBE_HOST } from './adobe.ts'
 import { MAGNIFIC_ACCEPTS, MAGNIFIC_HOST, MAGNIFIC_PORT } from './magnific.ts'
 import type { AgencyPreset, Protocol } from './types'
 
@@ -10,11 +11,13 @@ export const AGENCY_PRESETS: AgencyPreset[] = [
     key: 'adobe',
     name: 'Adobe Stock',
     protocol: 'sftp',
-    host: 'sftp.contributor.adobestock.com',
+    host: ADOBE_HOST,
     port: 22,
-    loginHint: 'ID + password dari Contributor Portal > Upload > Learn More > Generate password',
-    note: 'Hanya untuk akun yang sudah mendapat akses SFTP.',
-    helpUrl: 'https://helpx.adobe.com/stock/how-to/upload-video-to-adobe-stock.html'
+    loginHint: 'Username = ID kontributor (angka). Password: Contributor Portal → Upload → Importing files using SFTP → Generate password',
+    note:
+      'Hanya untuk akun yang sudah mendapat akses SFTP. File dikirim satu per satu di folder utama (folder/ZIP tidak dihitung Adobe). Vektor EPS/AI/SVG dikirim tanpa JPG pasangannya (Adobe membuat pratinjau sendiri). PNG resminya lewat web; kalau lewat SFTP tidak muncul, unggah lewat web.',
+    accepts: ADOBE_ACCEPTS,
+    helpUrl: 'https://helpx.adobe.com/stock/contributor/submit-your-content/submit-vectors/submit-vectors-to-adobe-stock.html'
   },
   {
     key: 'shutterstock',

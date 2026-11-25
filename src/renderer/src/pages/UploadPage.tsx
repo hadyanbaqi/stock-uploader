@@ -229,13 +229,15 @@ export default function UploadPage({ files, setFiles, onQueued, onGoAccounts, on
         r.alreadySent += x.alreadySent
         r.wrongType += x.wrongType
         r.wrongTypeNote ??= x.wrongTypeNote
+        r.previewSkipped = (r.previewSkipped ?? 0) + (x.previewSkipped ?? 0)
       }
       const skipped = [
         r.alreadySent && `${r.alreadySent} sudah pernah dikirim ke akun itu`,
         r.duplicates && `${r.duplicates} sudah ada di antrean`,
         r.sameName && `${r.sameName} punya nama sama dengan file lain ke akun yang sama`,
         r.missing && `${r.missing} filenya tidak ditemukan`,
-        r.wrongType && `${r.wrongType} jenis filenya tidak diterima (${r.wrongTypeNote})`
+        r.wrongType && `${r.wrongType} jenis filenya tidak diterima (${r.wrongTypeNote})`,
+        r.previewSkipped && `${r.previewSkipped} JPG pratinjau vektor tidak dikirim ke Adobe (Adobe membuat pratinjau sendiri dari EPS/AI/SVG)`
       ].filter(Boolean)
       if (!r.added) {
         setError(`Tidak ada yang ditambahkan: ${skipped.join(', ')}.`)

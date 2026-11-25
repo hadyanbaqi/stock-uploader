@@ -78,7 +78,9 @@ const accounts: Record<string, ResolvedAccount & { root: string }> = {
   ftps: { name: 'Uji FTPS', color: '#16a34a', root: ftps.root, target: { ...base, protocol: 'ftps', port: 2331, allowInvalidCert: true } },
   sftp: { name: 'Uji SFTP', color: '#9333ea', root: sftp.root, target: { ...base, protocol: 'sftp', port: 2232 } },
   salah: { name: 'Uji password salah', color: '#dc2626', root: ftp.root, target: { ...base, protocol: 'ftp', port: 2131, password: 'salah' } },
-  freepik: { name: 'Uji Freepik', color: '#0ea5e9', agency: 'freepik', root: sftp.root, target: { ...base, protocol: 'sftp', port: 2232 } }
+  freepik: { name: 'Uji Freepik', color: '#0ea5e9', agency: 'freepik', root: sftp.root, target: { ...base, protocol: 'sftp', port: 2232 } },
+  // "Folder tujuan" terisi, tapi Adobe tetap harus ke folder utama.
+  adobe: { name: 'Uji Adobe', color: '#dc2626', agency: 'adobe', root: sftp.root, target: { ...base, protocol: 'sftp', port: 2232, remoteDir: 'folder-salah' } }
 }
 
 // Kait untuk tes: dipanggil setiap ada kemajuan upload.
@@ -298,6 +300,27 @@ console.log('\n[6c] Magnific: file dikirim ke folder photo/psd/vector + subfolde
   check('PSD + JPG-nya sama-sama di psd/<subfolder>', (await at(`psd/${day}/efek.psd`, files[2])) && (await at(`psd/${day}/efek.jpg`, files[3])))
   check('JPG tanpa pasangan di photo/<subfolder>', await at(`photo/${day}/kota.jpg`, files[4]))
   check('tidak ada file di root server', !files.some((f) => existsSync(path.join(sftp.root, path.basename(f)))))
+}
+
+// 6d. Adobe Stock: file lepas di folder utama, JPG pratinjau vektor tidak dikirim, PNG/ZIP ditolak
+console.log('\n[6d] Adobe Stock: folder utama, tanpa JPG pratinjau vektor')
+{
+  const { isAdobeVectorPreview } = await import('../src/shared/adobe.ts')
+  check('JPG dengan EPS bernama sama = pratinjau vektor', isAdobeVectorPreview('ikon.jpg', (e) => e === 'eps') && isAdobeVectorPreview('ikon.JPEG', (e) => e === 'svg'))
+  check('JPG biasa bukan pratinjau', !isAdobeVectorPreview('foto.jpg', () => false) && !isAdobeVectorPreview('ikon.eps', () => true))
+  q.clearDone()
+  const dir = path.join(work, 'adobe')
+  mkdirSync(dir, { recursive: true })
+  const files = ['vadobe.eps', 'vadobe.jpg', 'fadobe.jpg', 'tadobe.png', 'zadobe.zip'].map((n) => {
+    const f = path.join(dir, n)
+    writeFileSync(f, randomBytes(1024))
+    return f
+  })
+  const r = await q.add(files, ['adobe'])
+  check('EPS, foto, PNG masuk; JPG pratinjau dilewati; ZIP ditolak', r.added === 3 && r.previewSkipped === 1 && r.wrongType === 1, JSON.stringify(r))
+  await waitFor(q, (ts) => ts.every(finished), 60_000)
+  check('EPS dan foto ada di folder utama (bukan "folder-salah")', (await sameFile(files[0], path.join(sftp.root, 'vadobe.eps'))) && (await sameFile(files[2], path.join(sftp.root, 'fadobe.jpg'))))
+  check('JPG pratinjau tidak terkirim', !existsSync(path.join(sftp.root, 'vadobe.jpg')) && !existsSync(path.join(sftp.root, 'folder-salah')))
 }
 
 // 7. file besar
