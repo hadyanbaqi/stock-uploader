@@ -79,7 +79,7 @@ export const AGENCY_CSV: { key: string; name: string; note?: string }[] = [
   { key: 'adobe', name: 'Adobe Stock' },
   { key: 'shutterstock', name: 'Shutterstock' },
   { key: 'vecteezy', name: 'Vecteezy' },
-  { key: 'freepik', name: 'Freepik' },
+  { key: 'freepik', name: 'Magnific (Freepik)' },
   { key: 'pond5', name: 'Pond5' },
   { key: 'dreamstime', name: 'Dreamstime' },
   { key: '123rf', name: '123RF' }

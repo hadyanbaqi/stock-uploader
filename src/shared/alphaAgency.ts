@@ -17,6 +17,8 @@ export type AlphaAgencyRule = {
   minMp: number
   /** Minimal sisi terpanjang (px). */
   minSide?: number
+  /** Minimal sisi terpendek (px), mis. Magnific: tiap sisi ≥ 2.000 px. */
+  minShort?: number
   /** Maksimal sisi terpanjang untuk JPG (px). */
   maxSide?: number
   /** false = agensi ini menolak gambar buatan AI; file AI dilewati untuk agensi ini. */
@@ -43,13 +45,13 @@ export const ALPHA_AGENCIES: Record<AlphaAgency, AlphaAgencyRule> = {
   },
   freepik: {
     folder: 'FREEPIK',
-    label: 'Freepik',
+    label: 'Magnific (Freepik)',
     files: ['psd', 'jpg'],
     minMp: 0,
-    minSide: 2000,
+    minShort: 2000,
     maxSide: 10000,
     acceptsAi: true,
-    note: 'PSD (1,5–250 MB) + JPG pratinjau bernama sama, sisi terpanjang 2.000–10.000 px. Tandai AI di CSV Freepik.'
+    note: 'PSD (1,5–325 MB) + JPG pratinjau bernama sama (0,5–80 MB), tiap sisi 2.000–10.000 px. Upload lewat sFTP ke folder psd/ (otomatis).'
   },
   vecteezy: {
     folder: 'VECTEEZY',
@@ -131,6 +133,7 @@ export function agencyScale(w: number, h: number, agencies: AlphaAgency[]): numb
     const mp = r.minMp * 1_000_000
     if (w * h * s * s < mp) s = Math.sqrt(mp / (w * h))
     if (r.minSide && Math.max(w, h) * s < r.minSide) s = r.minSide / Math.max(w, h)
+    if (r.minShort && Math.min(w, h) * s < r.minShort) s = r.minShort / Math.min(w, h)
   }
   // Sedikit lebih dari batas supaya pembulatan tidak membuatnya kurang 1 piksel.
   return s > 1 ? s * 1.002 : 1

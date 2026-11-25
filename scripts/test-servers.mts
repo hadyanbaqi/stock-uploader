@@ -151,6 +151,14 @@ export async function sftpServer(port: number, root: string) {
             if (v?.fd === undefined) return sftp.status(id, STATUS_CODE.FAILURE)
             sftp.attrs(id, attrsOf(fstatSync(v.fd)))
           })
+          sftp.on('MKDIR', (id: number, p: string) => {
+            try {
+              mkdirSync(local(p))
+              sftp.status(id, STATUS_CODE.OK)
+            } catch {
+              sftp.status(id, STATUS_CODE.FAILURE)
+            }
+          })
           sftp.on('FSETSTAT', (id: number) => sftp.status(id, STATUS_CODE.OK))
           sftp.on('SETSTAT', (id: number) => sftp.status(id, STATUS_CODE.OK))
           sftp.on('OPENDIR', (id: number, p: string) => sftp.handle(id, mk({ dir: local(p) })))

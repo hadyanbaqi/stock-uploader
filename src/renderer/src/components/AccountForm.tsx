@@ -193,8 +193,17 @@ export default function AccountForm(props: Props) {
           </label>
 
           <label className="field">
-            <span>Folder tujuan (opsional)</span>
-            <input value={v.remoteDir} onChange={(e) => set('remoteDir', e.target.value)} placeholder="Kosongkan = folder utama" />
+            <span>{v.agency === 'freepik' ? 'Nama subfolder (opsional)' : 'Folder tujuan (opsional)'}</span>
+            <input
+              value={v.remoteDir}
+              onChange={(e) => set('remoteDir', e.target.value)}
+              placeholder={v.agency === 'freepik' ? 'mis. batch-1 · kosong = upload-tanggal' : 'Kosongkan = folder utama'}
+            />
+            {v.agency === 'freepik' && (
+              <span className="muted small">
+                Magnific menolak file di folder utama. File otomatis dikirim ke photo/, psd/, vector/, atau video/ lalu subfolder ini. JPG ikut pasangannya (EPS → vector, PSD → psd).
+              </span>
+            )}
           </label>
 
           <div className="field">

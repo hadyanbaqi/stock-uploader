@@ -286,7 +286,7 @@ export async function inject(
           const size = await psdPreviewJpeg(p, jpg)
           await injectMeta(jpg, r, backupDir)
           previews++
-          if (Math.max(size.width, size.height) < PSD_PREVIEW_MIN) smallPreviews.push(path.basename(jpg))
+          if (Math.min(size.width, size.height) < PSD_PREVIEW_MIN) smallPreviews.push(path.basename(jpg))
         } catch (err) {
           all[p] = { ...all[p], error: `Metadata tertanam, tapi JPG pratinjau gagal dibuat: ${String((err as Error)?.message ?? err)}` }
         }

@@ -4,7 +4,7 @@
  * Jalankan: node scripts/test-upload.mts        (BIG=1 untuk tambah tes file 500 MB)
  */
 import { createHash, randomBytes } from 'node:crypto'
-import { closeSync, createReadStream, mkdirSync, mkdtempSync, openSync, statSync, writeFileSync, writeSync } from 'node:fs'
+import { closeSync, createReadStream, existsSync, mkdirSync, mkdtempSync, openSync, statSync, writeFileSync, writeSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { UploadQueue, type ResolvedAccount } from '../src/main/queue.ts'
@@ -255,10 +255,49 @@ console.log('\n[6b] Jenis file yang tidak diterima agensi dilewati')
   writeFileSync(jpg, 'jpg')
   const r = await q.add([png, jpg], ['freepik', 'ftp'])
   check('PNG ke Freepik dilewati, JPG ke Freepik + keduanya ke FTP biasa masuk', r.wrongType === 1 && r.added === 3, JSON.stringify(r))
-  check('pesan menyebut format yang diterima', /Freepik hanya menerima JPG, EPS, PSD/.test(r.wrongTypeNote ?? ''), r.wrongTypeNote)
+  check('pesan menyebut format yang diterima', /Magnific \(Freepik\) hanya menerima JPG, EPS/.test(r.wrongTypeNote ?? ''), r.wrongTypeNote)
   const { explainError } = await import('../src/main/connection.ts')
   check('error SFTP "permission denied" dijelaskan (bukan "Koneksi gagal")', /jenis file tidak diterima/.test(explainError(Object.assign(new Error('fastPut: permission denied Local: /a.png'), { code: 3 })).message))
   await waitFor(q, (ts) => ts.every(finished), 60_000)
+}
+
+// 6c. Magnific: tidak boleh di root, file masuk photo/ psd/ vector/ + subfolder (dibuat otomatis)
+console.log('\n[6c] Magnific: file dikirim ke folder photo/psd/vector + subfolder')
+{
+  const { magnificRemoteDir, magnificFolder, isOldFreepikTarget } = await import('../src/shared/magnific.ts')
+  const none = () => false
+  const d = new Date(2026, 10, 25)
+  check('JPG biasa → photo/upload-2026-11-25', magnificRemoteDir('', 'kota.jpg', none, d) === 'photo/upload-2026-11-25')
+  check('JPG dengan EPS bernama sama → vector', magnificFolder('ikon.jpg', (e) => e === 'eps') === 'vector')
+  check('JPG dengan PSD bernama sama → psd', magnificFolder('efek.jpg', (e) => e === 'psd') === 'psd')
+  check('EPS/AI/SVG → vector, PSD → psd, MP4 → video', magnificFolder('a.EPS', none) === 'vector' && magnificFolder('a.svg', none) === 'vector' && magnificFolder('a.psd', none) === 'psd' && magnificFolder('a.mp4', none) === 'video')
+  check('"Folder tujuan" akun = nama subfolder', magnificRemoteDir('Batch Nov #1', 'a.eps', none, d) === 'vector/Batch-Nov-1')
+  check('"Folder tujuan" sudah lengkap (photo/x) dipakai apa adanya', magnificRemoteDir('/photo/tekstur/', 'a.eps', none, d) === 'photo/tekstur')
+  check('"Folder tujuan" cuma "photo" → tetap pakai subfolder', magnificRemoteDir('photo', 'a.eps', none, d) === 'vector/upload-2026-11-25')
+  check('akun Freepik lama (FTP 21) dikenali untuk dipindah', isOldFreepikTarget({ protocol: 'ftp', host: '', port: 21 }) && !isOldFreepikTarget({ protocol: 'sftp', host: 'uploads.magnific.com', port: 60022 }))
+
+  q.clearDone()
+  const dir = path.join(work, 'magnific')
+  mkdirSync(dir, { recursive: true })
+  const files = ['ikon.eps', 'ikon.jpg', 'efek.psd', 'efek.jpg', 'kota.jpg'].map((n) => {
+    const f = path.join(dir, n)
+    writeFileSync(f, randomBytes(2048))
+    return f
+  })
+  const r = await q.add(files, ['freepik'])
+  await waitFor(q, (ts) => ts.every(finished), 60_000)
+  const done = q.list().filter((t) => t.accountId === 'freepik' && files.includes(t.filePath))
+  check('5 file Magnific terkirim', r.added === 5 && done.every((t) => t.status === 'done'), done.map((t) => `${t.fileName}:${t.status} ${t.error ?? ''}`).join(', '))
+  const day = (() => {
+    const t = new Date(done[0]?.addedAt ?? Date.now())
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `upload-${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`
+  })()
+  const at = (rel: string, f: string) => sameFile(f, path.join(sftp.root, rel))
+  check('EPS + JPG-nya sama-sama di vector/<subfolder>', (await at(`vector/${day}/ikon.eps`, files[0])) && (await at(`vector/${day}/ikon.jpg`, files[1])))
+  check('PSD + JPG-nya sama-sama di psd/<subfolder>', (await at(`psd/${day}/efek.psd`, files[2])) && (await at(`psd/${day}/efek.jpg`, files[3])))
+  check('JPG tanpa pasangan di photo/<subfolder>', await at(`photo/${day}/kota.jpg`, files[4]))
+  check('tidak ada file di root server', !files.some((f) => existsSync(path.join(sftp.root, path.basename(f)))))
 }
 
 // 7. file besar
