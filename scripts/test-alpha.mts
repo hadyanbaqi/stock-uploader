@@ -134,7 +134,7 @@ check(
 )
 check('1024×1024 + Adobe → diperbesar ≥ 4 MP', 1024 * 1024 * agencyScale(1024, 1024, ['adobe']) ** 2 >= 4_000_000)
 check('1024×1024 + 123RF → ≥ 6 MP', 1024 * 1024 * agencyScale(1024, 1024, ['123rf', 'adobe']) ** 2 >= 6_000_000)
-check('1500×1000 + Freepik → sisi terpanjang ≥ 2.000 px', Math.round(1500 * agencyScale(1500, 1000, ['freepik'])) >= 2000)
+check('1500×1000 + Magnific → tiap sisi ≥ 2.000 px (sisi pendek juga)', Math.round(1000 * agencyScale(1500, 1000, ['freepik'])) >= 2000)
 check('sudah besar → tidak diubah', agencyScale(6000, 4000, ['adobe', '123rf', 'freepik']) === 1)
 check('tanpa agensi → 1', agencyScale(500, 500, []) === 1)
 check('gambar AI: Shutterstock, Pond5, Alamy dilewati', skippedForAi(['adobe', 'shutterstock', 'pond5', 'alamy', 'freepik'], true).join() === 'shutterstock,pond5,alamy')

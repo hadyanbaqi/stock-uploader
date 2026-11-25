@@ -210,7 +210,7 @@ export function cleanStartUrls(list: string[]): string[] {
 export const START_PRESETS: { label: string; url: string }[] = [
   { label: 'Adobe Stock', url: 'https://contributor.stock.adobe.com/' },
   { label: 'Shutterstock', url: 'https://submit.shutterstock.com/' },
-  { label: 'Freepik', url: 'https://contributor.freepik.com/' },
+  { label: 'Magnific (Freepik)', url: 'https://www.magnific.com/ai/contributors' },
   { label: 'Vecteezy', url: 'https://www.vecteezy.com/' },
   { label: 'Dreamstime', url: 'https://www.dreamstime.com/' },
   { label: '123RF', url: 'https://www.123rf.com/' },

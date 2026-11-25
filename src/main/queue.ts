@@ -6,6 +6,8 @@ import type { ConnectionTarget } from './connection.ts'
 import { explainError } from './connection.ts'
 import { isPermanent, uploadFile, type UploadOptions, type UploadOutcome } from './transfer.ts'
 import { agencyAccepts } from '../shared/presets.ts'
+import { magnificRemoteDir } from '../shared/magnific.ts'
+import { existsSync } from 'node:fs'
 
 export type ResolvedAccount = { name: string; color: string; agency?: string; target: ConnectionTarget }
 
@@ -283,7 +285,7 @@ export class UploadQueue {
       }
       sample = { at: Date.now(), bytes: t.sent }
 
-      const out = await this.upload(acc.target, t.filePath, {
+      const out = await this.upload(targetFor(acc, t), t.filePath, {
         signal: run.ctl.signal,
         resume,
         onProgress: (sent) => {
@@ -386,4 +388,18 @@ export class UploadQueue {
       }
     })
   }
+}
+
+/**
+ * Magnific (agensi "freepik") menolak file di root: tiap file dikirim ke photo/, psd/, vector/ atau video/
+ * + subfolder. JPG ikut pasangannya (EPS → vector, PSD → psd). Tanggal subfolder dari waktu masuk antrean,
+ * supaya EPS dan JPG-nya selalu sampai di folder yang sama.
+ */
+export function targetFor(acc: ResolvedAccount, t: Pick<QueueTask, 'filePath' | 'addedAt'>): ConnectionTarget {
+  if (acc.agency !== 'freepik') return acc.target
+  const dir = path.dirname(t.filePath)
+  const stem = path.basename(t.filePath, path.extname(t.filePath))
+  const hasSibling = (ext: string) => existsSync(path.join(dir, `${stem}.${ext}`)) || existsSync(path.join(dir, `${stem}.${ext.toUpperCase()}`))
+  const remoteDir = magnificRemoteDir(acc.target.remoteDir, path.basename(t.filePath), hasSibling, new Date(t.addedAt || Date.now()))
+  return { ...acc.target, remoteDir, makeDirs: true }
 }

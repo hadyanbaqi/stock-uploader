@@ -45,7 +45,7 @@ async function uploadFtp(t: ConnectionTarget, localPath: string, size: number, o
           ? { rejectUnauthorized: !t.allowInvalidCert, servername: isIP(t.host) ? undefined : t.host }
           : undefined
     })
-    if (t.remoteDir) await client.cd(t.remoteDir)
+    if (t.remoteDir) await (t.makeDirs ? client.ensureDir(t.remoteDir) : client.cd(t.remoteDir))
 
     let start = 0
     if (opts.resume) {
@@ -118,6 +118,14 @@ async function uploadSftp(t: ConnectionTarget, localPath: string, size: number, 
       retries: 0
     })
     if (opts.signal.aborted) throw new Error('Dibatalkan')
+    if (t.makeDirs && t.remoteDir && !(await client.exists(t.remoteDir))) {
+      try {
+        await client.mkdir(t.remoteDir, true)
+      } catch (err) {
+        // Upload lain bisa membuat folder yang sama di saat bersamaan.
+        if (!(await client.exists(t.remoteDir))) throw err
+      }
+    }
     opts.onProgress(0)
     // fastPut mengirim beberapa potongan sekaligus, jauh lebih cepat untuk server yang jauh.
     await client.fastPut(localPath, remote, {

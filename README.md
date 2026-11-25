@@ -90,6 +90,16 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
   Windows: installer berjalan senyap lalu aplikasi terbuka lagi. Mac: aplikasi lama diganti lalu dibuka lagi;
   kalau dijalankan dari DMG atau folder yang tidak bisa ditulisi, DMG dibuka untuk dipasang manual.
 
+**Versi 1.8.0: Magnific (dulu Freepik) lewat sFTP**
+
+- Freepik kini Magnific; FTP port 21 sudah mati. Preset baru: **SFTP `uploads.magnific.com` port 60022**,
+  username kontributor + password dari dashboard (Files → Upload via FTP → Get password). Hanya untuk ≥ 1.000 file terbit.
+- Akun Freepik lama otomatis dipindah ke host/port baru; buat password baru di dashboard lalu isi ulang.
+- Magnific menolak file di folder utama. Tiap file otomatis dikirim ke `photo/`, `psd/`, `vector/`, atau `video/`
+  + subfolder (isi akun "Nama subfolder", kosong = `upload-YYYY-MM-DD`). JPG ikut pasangannya: EPS/AI/SVG → `vector/`,
+  PSD → `psd/`. Folder dibuat otomatis.
+- Diterima: JPG, EPS (+ AI/SVG opsional), PSD, MP4/MOV. Pratinjau EPS/PSD: tiap sisi 2.000–10.000 px; PSD 1,5–325 MB.
+
 **Versi 1.7.0: Transparan → paket per agensi**
 
 Centang agensi di Transparan → tiap agensi dapat folder sendiri (nama folder sama dengan upload otomatis):
@@ -98,7 +108,7 @@ Centang agensi di Transparan → tiap agensi dapat folder sendiri (nama folder s
 | --- | --- | --- |
 | `ADOBE-STOCK/` | PNG transparan | 4–100 MP, ≤ 45 MB, sRGB; PNG lewat portal web |
 | `SHUTTERSTOCK/` | JPG (efek di latar aslinya) | ≥ 4 MP sRGB. PNG/PSD ditolak; EPS hanya vektor asli. Tidak menerima AI |
-| `FREEPIK/` | `nama.psd` + `nama.jpg` | PSD 1,5–250 MB; JPG 2.000–10.000 px, nama sama |
+| `FREEPIK/` | `nama.psd` + `nama.jpg` | Magnific: PSD 1,5–325 MB; JPG tiap sisi 2.000–10.000 px, nama sama |
 | `VECTEEZY/` | PNG transparan | ≥ 4 MP, ≤ 50 MB |
 | `POND5/` | PNG transparan | ≥ 2.000 px. Tidak menerima AI |
 | `123RF/` | JPG | ≥ 6 MP, ≤ 30 MB |

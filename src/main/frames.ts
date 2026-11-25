@@ -345,7 +345,7 @@ function isNativeBgra(): boolean {
   return nativeBgra
 }
 
-/** Batas pratinjau Freepik/Magnific untuk PSD: sisi terpanjang 2.000–10.000 px. */
+/** Batas pratinjau Magnific (Freepik) untuk PSD/EPS: tiap sisi 2.000–10.000 px. */
 export const PSD_PREVIEW_MIN = 2000
 export const PSD_PREVIEW_MAX = 10000
 

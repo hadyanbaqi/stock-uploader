@@ -232,7 +232,7 @@ export async function runAlpha(paths: string[], o: AlphaOptions): Promise<AlphaR
     if (agencies.length) {
       result.notes = []
       for (const [a, n] of aiSkipped) result.notes.push(`${ALPHA_AGENCIES[a].label}: ${n} gambar AI dilewati (agensi ini menolak konten AI).`)
-      if (smallPsd) result.notes.push(`Freepik: ${smallPsd} PSD di bawah 1,5 MB (batas minimal Freepik). Pakai gambar lebih besar.`)
+      if (smallPsd) result.notes.push(`Magnific (Freepik): ${smallPsd} PSD di bawah 1,5 MB (batas minimal). Pakai gambar lebih besar.`)
     }
     if (o.zip && written.length) {
       const zipPath = `${outDir}.zip`

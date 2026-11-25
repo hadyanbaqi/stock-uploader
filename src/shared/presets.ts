@@ -1,3 +1,4 @@
+import { MAGNIFIC_ACCEPTS, MAGNIFIC_HOST, MAGNIFIC_PORT } from './magnific.ts'
 import type { AgencyPreset, Protocol } from './types'
 
 /**
@@ -44,16 +45,17 @@ export const AGENCY_PRESETS: AgencyPreset[] = [
     helpUrl: 'https://eezycontributors.zendesk.com/hc/en-us/articles/26668485078676-Upload-Settings'
   },
   {
+    // Kunci tetap 'freepik' supaya akun, riwayat, dan folder FREEPIK lama tetap jalan.
     key: 'freepik',
-    name: 'Freepik',
-    protocol: 'ftp',
-    host: '',
-    port: 21,
-    loginHint: 'Host, username, dan password dari dashboard kontributor Freepik',
-    note: 'File di FTP Freepik dihapus otomatis setelah 6 bulan. Hanya JPG, EPS (+JPG), dan PSD (+JPG pratinjau); PNG ditolak server.',
-    // Panduan FTP Magnific/Freepik: foto JPG, vektor EPS + JPG bernama sama, PSD + JPG pratinjau.
-    accepts: ['jpg', 'jpeg', 'eps', 'psd'],
-    helpUrl: 'https://www.freepik.com/ai/contributors/ftp-upload-method'
+    name: 'Magnific (Freepik)',
+    protocol: 'sftp',
+    host: MAGNIFIC_HOST,
+    port: MAGNIFIC_PORT,
+    loginHint: 'Username kontributor + password dari dashboard Magnific: Files → pilih jenis → Upload via FTP → Get password (password baru membatalkan yang lama)',
+    note:
+      'Hanya untuk kontributor dengan ≥ 1.000 file terbit. File otomatis masuk ke photo/, psd/, vector/, atau video/ + subfolder (isi "Folder tujuan" dengan nama subfolder, kosong = upload-tanggal). Vektor: EPS + JPG nama sama; PSD: PSD + JPG nama sama. File yang tidak disubmit dihapus setelah 180 hari.',
+    accepts: MAGNIFIC_ACCEPTS,
+    helpUrl: 'https://www.magnific.com/ai/contributors/ftp-upload-method'
   },
   {
     key: 'pond5',

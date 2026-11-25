@@ -1,3 +1,4 @@
+import { isOldFreepikTarget, MAGNIFIC_HOST, MAGNIFIC_PORT } from '../shared/magnific'
 import { app, safeStorage } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { promises as fs } from 'node:fs'
@@ -18,6 +19,15 @@ async function load(): Promise<StoreFile> {
     const raw = await fs.readFile(storePath(), 'utf8')
     const parsed = JSON.parse(raw) as StoreFile
     cache = { version: 1, accounts: Array.isArray(parsed.accounts) ? parsed.accounts : [] }
+    // Freepik pindah ke Magnific: FTP port 21 mati, sekarang sFTP uploads.magnific.com:60022.
+    for (const acc of cache.accounts) {
+      if (acc.agency === 'freepik' && isOldFreepikTarget(acc)) {
+        acc.protocol = 'sftp'
+        acc.host = MAGNIFIC_HOST
+        acc.port = MAGNIFIC_PORT
+        acc.allowInvalidCert = false
+      }
+    }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
     cache = { version: 1, accounts: [] }

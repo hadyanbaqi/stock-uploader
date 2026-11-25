@@ -121,7 +121,7 @@ export default function MetadataPage({ files, onGoUpload, onGoSettings }: Props)
           r.saved && `${r.saved} file ditanami metadata (file asli dicadangkan dulu).`,
           r.previews && `${r.previews} JPG pratinjau PSD dibuat dengan nama yang sama (wajib untuk Freepik).`,
           r.smallPreviews.length &&
-            `Pratinjau di bawah 2.000 px, Freepik bisa menolak: ${r.smallPreviews.slice(0, 3).join(', ')}${r.smallPreviews.length > 3 ? ', …' : ''}.`,
+            `Pratinjau dengan sisi di bawah 2.000 px, Magnific (Freepik) bisa menolak: ${r.smallPreviews.slice(0, 3).join(', ')}${r.smallPreviews.length > 3 ? ', …' : ''}.`,
           r.csvOnly && `${r.csvOnly} file (SVG/ZIP) hanya lewat CSV.`,
           r.failed && `${r.failed} gagal, lihat pesan di file tersebut.`
         ]
