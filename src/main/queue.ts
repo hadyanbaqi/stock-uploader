@@ -7,6 +7,7 @@ import { explainError } from './connection.ts'
 import { isPermanent, uploadFile, type UploadOptions, type UploadOutcome } from './transfer.ts'
 import { agencyAccepts } from '../shared/presets.ts'
 import { magnificRemoteDir } from '../shared/magnific.ts'
+import { isAdobeVectorPreview } from '../shared/adobe.ts'
 import { existsSync } from 'node:fs'
 
 export type ResolvedAccount = { name: string; color: string; agency?: string; target: ConnectionTarget }
@@ -111,6 +112,11 @@ export class UploadQueue {
         if (rule && !rule.exts.includes(ext)) {
           result.wrongType++
           result.wrongTypeNote ??= `${rule.name} hanya menerima ${rule.exts.filter((x) => x !== 'jpeg').map((x) => x.toUpperCase()).join(', ')} lewat FTP`
+          continue
+        }
+        // Adobe membuat pratinjau vektor sendiri; JPG pasangan EPS/AI/SVG akan jadi ilustrasi terpisah kalau ikut dikirim.
+        if (acc.agency === 'adobe' && isAdobeVectorPreview(fileName, siblingCheck(filePath))) {
+          result.previewSkipped = (result.previewSkipped ?? 0) + 1
           continue
         }
         if (!force && this.deps.wasSent?.(accountId, fileName, size)) {
@@ -396,10 +402,17 @@ export class UploadQueue {
  * supaya EPS dan JPG-nya selalu sampai di folder yang sama.
  */
 export function targetFor(acc: ResolvedAccount, t: Pick<QueueTask, 'filePath' | 'addedAt'>): ConnectionTarget {
+  // Adobe tidak menghitung file di dalam folder: selalu kirim ke folder utama.
+  if (acc.agency === 'adobe') return acc.target.remoteDir ? { ...acc.target, remoteDir: '' } : acc.target
   if (acc.agency !== 'freepik') return acc.target
-  const dir = path.dirname(t.filePath)
-  const stem = path.basename(t.filePath, path.extname(t.filePath))
-  const hasSibling = (ext: string) => existsSync(path.join(dir, `${stem}.${ext}`)) || existsSync(path.join(dir, `${stem}.${ext.toUpperCase()}`))
+  const hasSibling = siblingCheck(t.filePath)
   const remoteDir = magnificRemoteDir(acc.target.remoteDir, path.basename(t.filePath), hasSibling, new Date(t.addedAt || Date.now()))
   return { ...acc.target, remoteDir, makeDirs: true }
+}
+
+/** Apakah ada file bernama sama dengan ekstensi lain di folder yang sama (mis. ikon.jpg ↔ ikon.eps). */
+function siblingCheck(filePath: string): (ext: string) => boolean {
+  const dir = path.dirname(filePath)
+  const stem = path.basename(filePath, path.extname(filePath))
+  return (ext) => existsSync(path.join(dir, `${stem}.${ext}`)) || existsSync(path.join(dir, `${stem}.${ext.toUpperCase()}`))
 }

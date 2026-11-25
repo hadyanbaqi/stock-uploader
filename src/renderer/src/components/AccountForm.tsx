@@ -192,6 +192,14 @@ export default function AccountForm(props: Props) {
             </div>
           </label>
 
+          {v.agency === 'adobe' ? (
+            <div className="field">
+              <span>Folder tujuan</span>
+              <span className="muted small">
+                Adobe Stock hanya menghitung file di folder utama (file di dalam folder atau ZIP diabaikan), jadi file selalu dikirim ke folder utama.
+              </span>
+            </div>
+          ) : (
           <label className="field">
             <span>{v.agency === 'freepik' ? 'Nama subfolder (opsional)' : 'Folder tujuan (opsional)'}</span>
             <input
@@ -205,6 +213,7 @@ export default function AccountForm(props: Props) {
               </span>
             )}
           </label>
+          )}
 
           <div className="field">
             <span>Warna label</span>

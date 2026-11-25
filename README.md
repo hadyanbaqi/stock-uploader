@@ -90,6 +90,13 @@ Aplikasi desktop pribadi (Windows dan Mac) untuk upload file ke banyak akun micr
   Windows: installer berjalan senyap lalu aplikasi terbuka lagi. Mac: aplikasi lama diganti lalu dibuka lagi;
   kalau dijalankan dari DMG atau folder yang tidak bisa ditulisi, DMG dibuka untuk dipasang manual.
 
+**Versi 1.8.1: Adobe Stock SFTP sesuai aturan dashboard**
+
+- File Adobe selalu dikirim satu per satu ke folder utama (file di dalam folder/ZIP tidak dihitung Adobe); isian folder diabaikan.
+- Vektor EPS/AI/SVG dikirim tanpa JPG pasangannya: Adobe membuat pratinjau sendiri, dan JPG yang ikut terkirim akan
+  jadi ilustrasi terpisah. ZIP dan jenis lain ditolak sebelum dikirim.
+- Login: username = ID kontributor (angka), password dari Upload → Importing files using SFTP → Generate password.
+
 **Versi 1.8.0: Magnific (dulu Freepik) lewat sFTP**
 
 - Freepik kini Magnific; FTP port 21 sudah mati. Preset baru: **SFTP `uploads.magnific.com` port 60022**,

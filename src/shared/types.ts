@@ -103,6 +103,8 @@ export type AddResult = {
   wrongType: number
   /** Contoh pesan untuk wrongType, mis. "Freepik hanya menerima JPG, EPS, PSD". */
   wrongTypeNote?: string
+  /** Adobe: JPG pratinjau vektor (ada EPS/AI/SVG bernama sama) tidak dikirim. */
+  previewSkipped?: number
 }
 
 export type HistoryEntry = {
